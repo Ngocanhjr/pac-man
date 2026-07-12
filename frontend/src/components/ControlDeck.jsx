@@ -1,16 +1,16 @@
 // ControlDeck.jsx — Bảng điều khiển kiểu nút bấm arcade.
 //
 // Quản lý toàn bộ lựa chọn cấu hình (controlled inputs) và phát ra qua onChange.
-// Config shape khớp với useRunner: {map, mode, problem, algorithm, heuristic,
-// advAlgorithm, depth, speed}.
+// Config shape khớp với useRunner: {map, problem, algorithm, heuristic, speed}.
 
-const ADV_ALGOS = [
-  { key: "alphabeta", name: "Alpha-Beta" },
-  { key: "minimax", name: "Minimax" },
-  { key: "expectimax", name: "Expectimax" },
-];
-
-const GROUP_LABEL = { uninformed: "Tìm kiếm mù", informed: "Tìm kiếm có thông tin" };
+const GROUP_LABEL = { uninformed: "Uninformed search", informed: "Informed search" };
+const HEURISTIC_LABEL = {
+  null: "None",
+  manhattan: "Manhattan distance",
+  nearest_food: "Nearest food",
+  farthest_food: "Farthest food",
+  food_count: "Food remaining",
+};
 
 // Heuristic hợp với từng bài toán. Chọn sai nhóm thì heuristic trả 0 -> A* suy
 // biến thành UCS, nên khi đổi bài toán ta tự đặt heuristic mặc định phù hợp.
@@ -36,6 +36,8 @@ export function ControlDeck({
   onPause,
   onStep,
   onStepBack,
+  canStepBack,
+  canStepNext,
   onReset,
   onCompare,
 }) {
@@ -44,8 +46,7 @@ export function ControlDeck({
     setCfg((c) => ({ ...c, ...patch }));
   };
 
-  const isStatic = cfg.mode === "static";
-  const usesHeuristic = isStatic && algoInfo?.[cfg.algorithm]?.uses_heuristic;
+  const usesHeuristic = algoInfo?.[cfg.algorithm]?.uses_heuristic;
   const isCompare = tab === "compare";
 
   // Nhóm thuật toán tĩnh theo uninformed/informed.
@@ -58,7 +59,7 @@ export function ControlDeck({
     return (
       <div className="crt-panel p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="crt-label">◢ So sánh</h2>
+          <h2 className="crt-label">◢ Compare</h2>
           <button
             className="font-term text-[18px] leading-none px-2 py-1 rounded border"
             style={{
@@ -66,34 +67,34 @@ export function ControlDeck({
               borderColor: "rgba(255,176,0,.35)",
             }}
             onClick={onToggleSound}
-            title="Bật/tắt âm thanh"
-            aria-label={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
+            title="Toggle sound"
+            aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
             aria-pressed={soundOn}
           >
             {soundOn ? "🔊 ON" : "🔇 OFF"}
           </button>
         </div>
 
-        <Field label="Bản đồ">
+        <Field label="Map">
           <select className="crt-select" value={cfg.map} disabled={busy}
             onChange={(e) => set({ map: e.target.value }, true)}>
             {maps.map((m) => <option key={m} value={m}>{m}</option>)}
           </select>
         </Field>
-        <Field label="Bài toán">
+        <Field label="Problem">
           <select className="crt-select" value={cfg.problem} disabled={busy}
             onChange={(e) => set(problemPatch(e.target.value), true)}>
-            <option value="eat_all">Ăn hết food</option>
-            <option value="path_to_farthest">Đi tới food xa nhất</option>
+            <option value="eat_all">Eat all food</option>
+            <option value="path_to_farthest">Reach the farthest food</option>
           </select>
         </Field>
-        <Field label="Heuristic (cho A*/Greedy)">
+        <Field label="Heuristic (for A*/Greedy)">
           <select className="crt-select" value={cfg.heuristic} disabled={busy}
             onChange={(e) => set({ heuristic: e.target.value }, true)}>
-            {heuristics.map((h) => <option key={h} value={h}>{h}</option>)}
+            {heuristics.map((h) => <option key={h} value={h}>{HEURISTIC_LABEL[h] || h}</option>)}
           </select>
         </Field>
-        <Field label="Chọn thuật toán để so sánh">
+        <Field label="Algorithms to compare">
           <div className="grid grid-cols-2 gap-1">
             {[...groups.uninformed, ...groups.informed].map((a) => {
               const checked = (cfg.compareAlgos || []).includes(a.key);
@@ -117,7 +118,7 @@ export function ControlDeck({
           </div>
         </Field>
         <button className="arcade-btn btn-compare" disabled={busy} onClick={onCompare}>
-          ⊞ So sánh {(cfg.compareAlgos || []).length || "tất cả"}
+          ⊞ Compare {(cfg.compareAlgos || []).length || "all"}
         </button>
       </div>
     );
@@ -130,7 +131,7 @@ export function ControlDeck({
     <div className="flex flex-col gap-4">
       {showRunControls && (
       <div className="crt-panel p-4 flex flex-col gap-3">
-        <h2 className="crt-label">◢ Cách chạy</h2>
+        <h2 className="crt-label">◢ Run mode</h2>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -138,7 +139,7 @@ export function ControlDeck({
             disabled={busy}
             onClick={() => set({ runMode: "auto" })}
           >
-            ▶ Tự động
+            ▶ Automatic
           </button>
           <button
             type="button"
@@ -146,12 +147,12 @@ export function ControlDeck({
             disabled={busy}
             onClick={() => set({ runMode: "step" })}
           >
-            ⇥ Từng bước
+            ⇥ Step-by-step
           </button>
         </div>
 
         {cfg.runMode === "auto" && (
-          <Field label={`Tốc độ: ${cfg.speed} bước/giây`}>
+          <Field label={`Speed: ${cfg.speed} steps/second`}>
             <input type="range" className="crt-range" min={1} max={60} value={cfg.speed}
               onChange={(e) => set({ speed: parseInt(e.target.value, 10) })} />
           </Field>
@@ -159,17 +160,17 @@ export function ControlDeck({
 
         {cfg.runMode === "auto" ? (
           <div className="grid grid-cols-3 gap-2 mt-1">
-            <button className="arcade-btn btn-run" disabled={busy} onClick={onRun}>▶ Chạy</button>
+            <button className="arcade-btn btn-run" disabled={busy} onClick={onRun}>▶ Run</button>
             <button className="arcade-btn btn-pause" disabled={!busy} onClick={onPause}>
-              {paused ? "▶ Tiếp" : "‖ Dừng"}
+              {paused ? "▶ Resume" : "‖ Pause"}
             </button>
-            <button className="arcade-btn btn-reset" disabled={busy} onClick={onReset}>↻ Đặt lại</button>
+            <button className="arcade-btn btn-reset" disabled={busy} onClick={onReset}>↻ Reset</button>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 mt-1">
-            <button className="arcade-btn btn-back" disabled={busy} onClick={onStepBack}>⇤ Quay lại</button>
-            <button className="arcade-btn btn-step" disabled={busy} onClick={onStep}>⇥ Bước tiếp</button>
-            <button className="arcade-btn btn-reset" disabled={busy} onClick={onReset}>↻ Đặt lại</button>
+            <button className="arcade-btn btn-back" disabled={busy || !canStepBack} onClick={onStepBack}>⇤ Step back</button>
+            <button className="arcade-btn btn-step" disabled={busy || !canStepNext} onClick={onStep}>⇥ Next step</button>
+            <button className="arcade-btn btn-reset" disabled={busy} onClick={onReset}>↻ Reset</button>
           </div>
         )}
       </div>
@@ -178,7 +179,7 @@ export function ControlDeck({
       {showSettings && (
       <div className="crt-panel p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="crt-label">◢ Insert Coin</h2>
+        <h2 className="crt-label">◢ Configuration</h2>
         <button
           className="font-term text-[18px] leading-none px-2 py-1 rounded border"
           style={{
@@ -186,73 +187,48 @@ export function ControlDeck({
             borderColor: "rgba(255,176,0,.35)",
           }}
           onClick={onToggleSound}
-          title="Bật/tắt âm thanh"
-          aria-label={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
+          title="Toggle sound"
+          aria-label={soundOn ? "Turn sound off" : "Turn sound on"}
           aria-pressed={soundOn}
         >
           {soundOn ? "🔊 ON" : "🔇 OFF"}
         </button>
       </div>
 
-      <Field label="Bản đồ">
+      <Field label="Map">
         <select className="crt-select" value={cfg.map} disabled={busy}
           onChange={(e) => set({ map: e.target.value }, true)}>
           {maps.map((m) => <option key={m} value={m}>{m}</option>)}
         </select>
       </Field>
 
-        <Field label="Chế độ">
-          <select className="crt-select" value={cfg.mode} disabled={busy}
-            onChange={(e) => set({ mode: e.target.value }, true)}>
-            <option value="static">Tĩnh (tìm đường / ăn hết food)</option>
-            <option value="adversarial">Đối kháng (có ma)</option>
+        <Field label="Problem">
+          <select className="crt-select" value={cfg.problem} disabled={busy}
+            onChange={(e) => set(problemPatch(e.target.value), true)}>
+            <option value="eat_all">Eat all food</option>
+            <option value="path_to_farthest">Reach the farthest food</option>
           </select>
         </Field>
-
-        {isStatic ? (
-          <>
-            <Field label="Bài toán">
-              <select className="crt-select" value={cfg.problem} disabled={busy}
-                onChange={(e) => set(problemPatch(e.target.value), true)}>
-                <option value="eat_all">Ăn hết food</option>
-                <option value="path_to_farthest">Đi tới food xa nhất</option>
-              </select>
-            </Field>
-            <Field label="Thuật toán">
-              <select className="crt-select" value={cfg.algorithm} disabled={busy}
-                onChange={(e) => set({ algorithm: e.target.value }, true)}>
-                {["uninformed", "informed"].map((g) =>
-                  groups[g].length ? (
-                    <optgroup key={g} label={GROUP_LABEL[g]}>
-                      {groups[g].map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
-                    </optgroup>
-                  ) : null
-                )}
-              </select>
-            </Field>
-            {usesHeuristic && (
-              <Field label="Heuristic">
-                <select className="crt-select" value={cfg.heuristic} disabled={busy}
-                  onChange={(e) => set({ heuristic: e.target.value }, true)}>
-                  {heuristics.map((h) => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </Field>
+        <Field label="Algorithm">
+          <select className="crt-select" value={cfg.algorithm} disabled={busy}
+            onChange={(e) => set({ algorithm: e.target.value }, true)}>
+            {["uninformed", "informed"].map((g) =>
+              groups[g].length ? (
+                <optgroup key={g} label={GROUP_LABEL[g]}>
+                  {groups[g].map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
+                </optgroup>
+              ) : null
             )}
-          </>
-        ) : (
-          <>
-            <Field label="Thuật toán">
-              <select className="crt-select" value={cfg.advAlgorithm} disabled={busy}
-                onChange={(e) => set({ advAlgorithm: e.target.value }, true)}>
-                {ADV_ALGOS.map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
-              </select>
-            </Field>
-            <Field label={`Độ sâu (depth): ${cfg.depth}`}>
-              <input type="range" className="crt-range" min={1} max={6} value={cfg.depth} disabled={busy}
-                onChange={(e) => set({ depth: parseInt(e.target.value, 10) }, true)} />
-            </Field>
-          </>
-      )}
+          </select>
+        </Field>
+        {usesHeuristic && (
+          <Field label="Heuristic">
+            <select className="crt-select" value={cfg.heuristic} disabled={busy}
+              onChange={(e) => set({ heuristic: e.target.value }, true)}>
+              {heuristics.map((h) => <option key={h} value={h}>{HEURISTIC_LABEL[h] || h}</option>)}
+            </select>
+          </Field>
+        )}
       </div>
       )}
     </div>

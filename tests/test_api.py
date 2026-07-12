@@ -14,9 +14,7 @@ def test_get_algorithms():
     assert r.status_code == 200
     data = r.json()
     keys = {a["key"] for a in data["algorithms"]}
-    # Đủ 6 thuật toán tĩnh + 3 đối kháng.
-    assert {"bfs", "dfs", "ucs", "ids", "greedy", "astar"} <= keys
-    assert {"minimax", "alphabeta", "expectimax"} <= keys
+    assert keys == {"bfs", "dfs", "ucs", "greedy", "astar"}
     assert "manhattan" in data["heuristics"]
 
 
@@ -24,7 +22,7 @@ def test_get_maps():
     r = client.get("/maps")
     assert r.status_code == 200
     names = {m["name"] for m in r.json()["maps"]}
-    assert {"small", "medium", "classic"} <= names
+    assert names == {"tiny", "small"}
 
 
 def test_get_single_map():
@@ -85,15 +83,16 @@ def test_compare_returns_rows():
         },
     )
     assert r.status_code == 200
-    rows = r.json()["results"]
+    data = r.json()
+    assert "map" not in data
+    rows = data["results"]
     assert len(rows) == 2
     for row in rows:
         assert row["found"] is True
         assert row["stats"]["path_length"] >= 1
-        # Mỗi row có dữ liệu để dựng maze side-by-side + cột optimal.
-        assert "path" in row and "visited_order" in row
+        assert "path" not in row and "visited_order" not in row
         assert "optimal" in row
-        assert row["stats"]["memory_kb"] >= 0
+        assert "memory_kb" not in row["stats"]
 
 
 def test_solve_path_to_farthest_returns_tree():
@@ -145,12 +144,5 @@ def test_compare_path_to_farthest_has_tree_and_optimal():
     assert rows["greedy"]["optimal"] is False
 
 
-def test_adversarial_runs():
-    r = client.post(
-        "/adversarial",
-        json={"map": "small", "algorithm": "alphabeta", "depth": 2, "max_steps": 20},
-    )
-    assert r.status_code == 200
-    data = r.json()
-    assert len(data["frames"]) >= 1
-    assert data["stats"]["status"] in ("playing", "win", "lose")
+def test_adversarial_endpoint_removed():
+    assert client.post("/adversarial", json={}).status_code == 404

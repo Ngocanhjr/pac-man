@@ -1,165 +1,165 @@
-# Pac-man A.I. — Phân tích không gian trạng thái & các thuật toán tìm kiếm
+# Pac-man A.I. — Tìm kiếm tĩnh và phân tích không gian trạng thái
 
-Đồ án môn **Trí tuệ nhân tạo**: mô hình hóa bài toán Pac-man theo **không gian trạng thái**, cài đặt và **so sánh** ba nhóm thuật toán tìm kiếm, kèm giao diện web trực quan hóa từng bước để demo và giải thích khái niệm.
+Đồ án Trí tuệ nhân tạo mô hình hóa Pac-man như bài toán tìm kiếm một tác nhân. Hệ thống cài đặt và trực quan hóa 5 thuật toán:
 
-- **Tìm kiếm mù (uninformed):** BFS, DFS, UCS, IDS
-- **Tìm kiếm có thông tin (informed):** Greedy Best-First, A\* (nhiều heuristic)
-- **Tìm kiếm đối kháng (adversarial):** Minimax, Alpha-Beta, Expectimax + evaluation function
+- Tìm kiếm mù: BFS, DFS, UCS.
+- Tìm kiếm có thông tin: Greedy Best-First, A*.
 
-**Backend** Python (FastAPI) chứa toàn bộ logic game + thuật toán. **Frontend** React + Vite + Tailwind (phong cách arcade CRT 80s) trực quan hóa maze, quá trình *expand* node, cây tìm kiếm từng bước với g/h/f, đường đi tìm được, và bảng/biểu đồ so sánh — kèm hiệu ứng CRT (scanline, power-on, particle) và âm thanh arcade.
-
----
-
-## ⚠️ Lưu ý quan trọng về Python (đọc trước khi chạy)
-
-Máy có **2 bản Python**: 3.14 và 3.12. Các package (FastAPI, uvicorn, pytest...) được cài cho **Python 3.12**. Nếu gõ `python` (thường trỏ tới 3.14) sẽ bị `ModuleNotFoundError: No module named 'fastapi'`.
-
-**Luôn chạy backend/test/benchmark bằng `py -3.12`** (không dùng `python` trực tiếp).
-
----
+Backend FastAPI chứa mô hình bài toán, thuật toán và metrics. Frontend React + Vite hiển thị maze, cây tìm kiếm, chế độ tự động/từng bước và màn so sánh.
 
 ## Cài đặt
 
-```bash
-# tại thư mục gốc project
-py -3.12 -m pip install -r backend/requirements.txt   # backend (Python 3.12)
-cd frontend && npm install                            # frontend (Node.js), chỉ cần lần đầu
+Máy phát triển dùng Python 3.12:
+
+```powershell
+py -3.12 -m pip install -r backend/requirements.txt
+cd frontend
+npm install
 ```
 
-## Chạy (cần cả HAI tiến trình song song)
+## Chạy ứng dụng
 
-**Terminal 1 — backend (FastAPI, cổng 8000):**
+Terminal 1:
 
-```bash
+```powershell
 py -3.12 -m uvicorn backend.api.main:app --reload --port 8000
 ```
 
-- Swagger docs để test tay: <http://localhost:8000/docs>
+Terminal 2:
 
-**Terminal 2 — frontend (Vite, cổng 5173):**
-
-```bash
+```powershell
 cd frontend
 npm run dev
 ```
 
-- Mở trình duyệt: <http://localhost:5173>
-- Backend mặc định `http://localhost:8000`. Chạy cổng khác thì tạo `frontend/.env` với `VITE_API_BASE=http://localhost:<cổng>`.
-- Build bản tĩnh: `npm run build` → `frontend/dist/` (xem thử bằng `npm run preview`).
+Mở <http://localhost:5173>. Swagger ở <http://localhost:8000/docs>.
 
-> Bản frontend HTML/JS thuần cũ được giữ ở `frontend-vanilla/` làm dự phòng demo (mở `index.html`, cấu hình backend trong `src/api.js`).
+## Phạm vi hiện tại
 
----
+- Map hiển thị qua API/UI: `tiny`, `small`.
+- Bài toán `eat_all`: ăn hết food.
+- Bài toán `path_to_farthest`: đi tới food xa nhất theo Manhattan.
+- Chế độ chạy: tự động hoặc từng bước, có quay lại.
+- Cây tìm kiếm ghi tối đa 250 node để bảo vệ UI; thuật toán vẫn tiếp tục giải sau giới hạn này.
 
-## Sử dụng giao diện
+## Mô hình trạng thái
 
-Giao diện có 2 tab:
+`GameState` là immutable dataclass gồm vị trí Pac-man, food, power pellets, ghosts, score, status, walls và kích thước map. Tìm kiếm chỉ dùng phần trạng thái liên quan đến từng bài toán:
 
-### Tab ▶ Chạy thuật toán
-Bố cục: **maze (trái) + cây duyệt từng bước (phải)** cạnh nhau, cấu hình và số liệu ở hàng dưới.
-
-1. Ở khối **Cấu hình**: chọn **Bản đồ** (small / medium / classic), **Chế độ** (Tĩnh / Đối kháng), **Bài toán** (ăn hết food / đi tới food xa nhất), **Thuật toán** và **Heuristic** (cho A\*/Greedy).
-2. Panel **Mô hình bài toán** tự giải thích State / Actions / Goal / Path cost và cách **loại trùng trạng thái** (explored set) cho bài đang chọn.
-3. Chọn **Tự động** hoặc **Từng bước**, rồi bấm **Chạy** / **Bước tiếp** / **Quay lại** / **Đặt lại**.
-4. Cây duyệt hiển thị OPEN / CURRENT / CLOSED và g/h/f từng node, đồng bộ với chuyển động của Pac-man; bảng **Score Panel** đổ số liệu khi chạy xong.
-
-### Tab ⊞ So sánh thuật toán
-Chạy nhiều thuật toán tĩnh trên cùng bản đồ, hiển thị: bảng so sánh (đánh dấu giá trị tốt nhất + cột Optimal), biểu đồ số node / thời gian / bộ nhớ, so sánh cây duyệt và đường đi trên maze. Bấm 1 dòng trong bảng để xem biểu đồ f/g/h của thuật toán đó.
-
----
-
-## Kiểm thử & thực nghiệm
-
-```bash
-py -3.12 -m pytest -v                    # 32 test
-py -3.12 experiments/run_benchmark.py    # sinh experiments/results.csv
-```
-
-**32 test** phủ: luật chơi (parse layout, legal actions, ăn food/pellet, đâm tường, goal test), tính đúng/tối ưu của thuật toán (BFS/UCS/IDS/A\* nhất quán độ dài đường đi, A\* + null heuristic = UCS, A\* admissible expand ít hơn BFS, DFS không cần tối ưu, không expand lại 1 state), và API (mọi endpoint kể cả input lỗi 400/404).
-
-**Benchmark** chạy 6 thuật toán tĩnh trên các bản đồ, in bảng ra console và ghi `experiments/results.csv` với các cột: `map, problem, algorithm, heuristic, found, path_length, cost, nodes_expanded, nodes_generated, max_frontier, time_ms`.
-
----
-
-## Thuật toán & heuristic
-
-| Nhóm | Key | Tên | Tối ưu? |
+| Bài toán | State key | Goal test | Path cost |
 |---|---|---|---|
-| Mù | `bfs` | Breadth-First Search | ✓ (khi mọi bước cùng chi phí) |
-| Mù | `dfs` | Depth-First Search | ✗ |
-| Mù | `ucs` | Uniform-Cost Search | ✓ |
-| Mù | `ids` | Iterative Deepening Search | ✓ |
-| Có thông tin | `greedy` | Greedy Best-First Search | ✗ |
-| Có thông tin | `astar` | A\* Search | ✓ khi heuristic admissible |
-| Đối kháng | `minimax` | Minimax (depth-limited) | — |
-| Đối kháng | `alphabeta` | Alpha-Beta Pruning | — |
-| Đối kháng | `expectimax` | Expectimax | — |
+| `eat_all` | `(pacman, food)` | `food` rỗng | Mỗi bước = 1 |
+| `path_to_farthest` | `pacman` | Pac-man tới ô đích | Mỗi bước = 1 |
 
-**Heuristic** (cho A\*/Greedy): `null`, `manhattan`, `nearest_food`, `farthest_food`, `food_count`. Tất cả đều admissible trên các bài toán hiện có — nên A\* luôn tối ưu (xem `search/registry.py`).
+Walls và kích thước map là bất biến, không tham gia hash/equality. Ghosts, score và status không ảnh hưởng khóa tìm kiếm tĩnh.
 
-## API endpoints (FastAPI)
+## Thuật toán và heuristic
 
-| Method | Path | Mô tả |
+| Nhóm | Thuật toán | Tối ưu |
 |---|---|---|
-| GET | `/algorithms` | Danh sách thuật toán + heuristic |
-| GET | `/maps` | Mọi bản đồ (tường, food, pellet, vị trí Pac-man/ma) |
-| GET | `/maps/{name}` | Một bản đồ (404 nếu không có) |
-| POST | `/solve` | Giải 1 thuật toán tĩnh → `found, actions, path, visited_order, tree, stats` |
-| POST | `/compare` | So sánh nhiều thuật toán → `results[]` (mỗi cái có `optimal`, `stats`, `tree`) |
-| POST | `/adversarial` | Mô phỏng trận Pac-man vs ma → `frames[], stats` |
+| Mù | BFS | Có khi mọi bước cùng chi phí |
+| Mù | DFS | Không đảm bảo |
+| Mù | UCS | Có |
+| Có thông tin | Greedy | Không đảm bảo |
+| Có thông tin | A* | Có với heuristic admissible |
 
----
+Heuristic: `null`, `manhattan`, `nearest_food`, `farthest_food`, `food_count`.
 
-## Cấu trúc thư mục
+## Metrics
 
+`SearchMetrics` trả:
+
+- `nodes_expanded`
+- `nodes_generated`
+- `max_frontier`
+- `time_ms`
+- `path_length`
+- `cost`
+- `search_depth`
+- `found`
+
+`max_frontier` là metric thuật toán; hệ thống không quy đổi nó thành dung lượng bộ nhớ.
+
+## API contract
+
+### `POST /solve`
+
+Request:
+
+```json
+{
+  "map": "small",
+  "algorithm": "astar",
+  "heuristic": "farthest_food",
+  "problem": "eat_all"
+}
 ```
+
+Response gồm `map`, `algorithm`, `heuristic`, `found`, `actions`, `path`, `visited_order`, `tree`, `tree_truncated`, `tree_limit`, `stats`.
+
+### `POST /compare`
+
+Request:
+
+```json
+{
+  "map": "small",
+  "algorithms": ["bfs", "ucs", "astar"],
+  "heuristic": "farthest_food",
+  "problem": "eat_all"
+}
+```
+
+Response:
+
+```json
+{
+  "problem": "eat_all",
+  "results": [
+    {
+      "algorithm": "astar",
+      "found": true,
+      "optimal": true,
+      "tree": [],
+      "tree_truncated": false,
+      "tree_limit": 250,
+      "stats": {}
+    }
+  ]
+}
+```
+
+`/compare` không trả top-level `map`; từng row không trả `path` hoặc `visited_order`.
+
+## Kiểm thử và benchmark
+
+```powershell
+py -3.12 -m pytest -q
+py -3.12 experiments/run_benchmark.py
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
+Benchmark ghi `experiments/results.csv` cho 5 thuật toán × 2 bài toán × 2 map.
+
+## Cấu trúc repo
+
+```text
 pac-man/
-├── backend/                    # Python (FastAPI) — logic + thuật toán
-│   ├── game/                   # state.py, layout.py, rules.py, problem.py
-│   ├── search/                 # uninformed.py, informed.py, adversarial.py,
-│   │                           # heuristics.py, evaluation.py, base.py, registry.py
-│   ├── metrics/                # counters.py (node expand, time, path length, memory...)
-│   ├── api/                    # main.py (FastAPI), schemas.py
-│   ├── maps/                   # small.txt, medium.txt, classic.txt
-│   └── requirements.txt        # fastapi, uvicorn, pydantic, pytest, httpx
-├── frontend/                   # React 19 + Vite + Tailwind v4 (bản chính)
-│   ├── index.html
-│   └── src/
-│       ├── App.jsx             # 2 tab: Chạy / So sánh
-│       ├── index.css           # theme CRT arcade (@theme Tailwind v4)
-│       ├── api/client.js       # gọi backend
-│       ├── hooks/              # useRunner.js (điều phối chạy), useMetadata.js
-│       ├── game/               # PacmanRenderer.js (canvas), effects.js
-│       ├── sound/audio.js
-│       └── components/         # ControlDeck, CRTScreen, Cabinet, ProblemModelPanel,
-│                               # SearchTreePanel, StatsPanel, CompareTable,
-│                               # CompareCharts, ComparisonView, FghChart
-├── frontend-vanilla/           # bản HTML/JS thuần (dự phòng demo)
-├── experiments/                # run_benchmark.py → results.csv
-├── tests/                      # test_rules.py, test_search.py,
-│                               # test_search_algorithms.py, test_api.py
-├── diagrams/                   # sơ đồ kiến trúc / luồng dữ liệu (HTML + JSON)
-├── docs/                       # PLAN.md + đề bài (PDF)
-└── README.md
+├── backend/
+│   ├── api/              # FastAPI routes + schemas
+│   ├── game/             # state, layout, rules, problems
+│   ├── maps/             # tiny.txt, small.txt (map demo)
+│   ├── metrics/          # SearchMetrics
+│   └── search/           # BFS, DFS, UCS, Greedy, A*, heuristics
+├── frontend/             # React + Vite + Canvas
+├── tests/                # rules, layout, search, API
+├── experiments/          # benchmark script + results.csv
+├── diagrams/             # Archify JSON + HTML
+└── docs/                 # đề bài + PLAN.md
 ```
 
-## Mô hình hóa bài toán (tóm tắt)
+Frontend duy nhất là `frontend/`.
 
-| Thành phần | Mô tả |
-|---|---|
-| **State** | đầy đủ: `(pacman, food, power_pellets, ghosts, score, scared_timer, status)`. Bài tĩnh rút gọn về `(pacman, food còn lại)` |
-| **Initial state** | nạp từ file layout trong `backend/maps/` |
-| **Actions** | UP / DOWN / LEFT / RIGHT (lọc bỏ nước đâm tường) |
-| **Transition** | `move_pacman` (tĩnh) / Pac-man + ma di chuyển (đối kháng) |
-| **Goal / Terminal** | ăn hết food hoặc tới ô đích (tĩnh); win / lose / đạt depth-limit (đối kháng) |
-| **Path cost** | mỗi bước = 1 (cho UCS/A\*) |
-
-**Loại trùng trạng thái (explored set) tùy bài toán:**
-- **Ăn hết food:** `state_key = (ô Pac-man, tập food còn lại)`. Cùng đứng 1 ô nhưng khác tập food ⇒ **2 state khác nhau, đều phải duyệt** — nếu loại chỉ theo ô sẽ cắt nhầm và không bao giờ ăn hết.
-- **Đi tới ô đích:** `state_key = ô Pac-man` (food không đổi) — "ô đã duyệt thì bỏ qua", đúng trực giác thông thường.
-
-Chi tiết phân tích, bảng ưu/khuyết và kế hoạch: [docs/PLAN.md](docs/PLAN.md). Sơ đồ kiến trúc & luồng dữ liệu: mở các file HTML trong [diagrams/](diagrams/).
-
-## Quy ước ký tự bản đồ
-
-`%` tường · `.` food · `o` power pellet · `P` Pac-man · `G` ma · (khoảng trắng) ô trống.

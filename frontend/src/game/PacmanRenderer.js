@@ -2,15 +2,10 @@
 //
 // Tọa độ dữ liệu là (row, col). Khi vẽ: x = col * cell, y = row * cell.
 // Renderer tự tính cell size để vừa khung canvas và căn giữa bản đồ.
-//
-// So với bản vanilla cũ: đây là CLASS (dùng được trong React qua ref), và
-// SỬA BUG hướng Pac-man trong setState() — tính hướng từ vị trí trước đó nên
-// miệng Pac-man quay đúng hướng đi ở chế độ đối kháng (trước luôn quay phải).
+// Dùng trong React qua ref để animation không phụ thuộc chu kỳ render component.
 
 // Bảng màu arcade gốc (đồng bộ với @theme trong index.css).
 const GHOST_COLORS = ["#FF0000", "#FFB8FF", "#00FFFF", "#FFB852"];
-const SCARED_BLUE = "#2121DE";
-const SCARED_WHITE = "#CFD8FF";
 const WALL_FILL = "#0a0f3a";
 const WALL_STROKE = "#2121DE";
 const FOOD_COLOR = "#FFB897";
@@ -33,7 +28,6 @@ export class PacmanRenderer {
 
     this.pacman = null;
     this.pacDir = "RIGHT";
-    this._prevPacman = null; // để suy ra hướng giữa các frame đối kháng
     this.ghosts = [];
     this.food = null;
     this.pellets = null;
@@ -74,11 +68,8 @@ export class PacmanRenderer {
     this.path = [];
     this.pacman = this.map.pacman_start.slice();
     this.pacDir = "RIGHT";
-    this._prevPacman = this.pacman.slice();
     this.ghosts = (this.map.ghosts_start || []).map((p, i) => ({
       pos: p.slice(),
-      direction: "STOP",
-      scared: false,
       color: GHOST_COLORS[i % GHOST_COLORS.length],
     }));
     this.food = new Set(this.map.food.map((p) => this._key(p)));
@@ -86,61 +77,23 @@ export class PacmanRenderer {
     this.draw();
   }
 
-  // Cập nhật trạng thái động từ một frame serialize (chế độ đối kháng).
-  // FIX: suy ra hướng Pac-man từ vị trí trước đó.
-  setState(st) {
-    const next = st.pacman.slice();
-    if (this._prevPacman) {
-      const dir = this._dirOf(this._prevPacman, next);
-      if (dir !== "STOP") this.pacDir = dir;
-    }
-    // Phát hiệu ứng ăn: ô mới vốn có food/pellet mà frame này đã mất.
-    const k = this._key(next);
-    if (this.onEat && this.food && (this.food.has(k) || (this.pellets && this.pellets.has(k)))) {
-      const [x, y] = this._px(next);
-      this.onEat(x + this.cell / 2, y + this.cell / 2, this.pellets && this.pellets.has(k));
-    }
-    this._prevPacman = next.slice();
-    this.pacman = next;
-    this._mouthPhase += 0.9;
-    this.food = new Set(st.food.map((p) => this._key(p)));
-    this.pellets = new Set(st.power_pellets.map((p) => this._key(p)));
-    this.ghosts = st.ghosts.map((g, i) => ({
-      pos: g.pos.slice(),
-      direction: g.direction,
-      scared: g.scared,
-      color: GHOST_COLORS[i % GHOST_COLORS.length],
-    }));
-  }
-
   setPacman(rc, dir) {
     this.pacman = rc.slice();
     if (dir) this.pacDir = dir;
   }
 
-  setSearchNode(node, { keepEaten = false, animate = true } = {}) {
+  setSearchNode(node, { animate = true } = {}) {
     if (!node) return;
-    const eatenFood = keepEaten && this.food
-      ? new Set(this.map.food.map((p) => this._key(p)).filter((k) => !this.food.has(k)))
-      : null;
-    const eatenPellets = keepEaten && this.pellets
-      ? new Set(this.map.power_pellets.map((p) => this._key(p)).filter((k) => !this.pellets.has(k)))
-      : null;
-
     this.setPacman(node.pos, node.action || this._dirOf(this.pacman, node.pos));
     this._prevPacman = node.pos.slice();
     if (node.food) this.food = new Set(node.food.map((p) => this._key(p)));
     if (node.power_pellets) this.pellets = new Set(node.power_pellets.map((p) => this._key(p)));
-    if (eatenFood) for (const k of eatenFood) this.food.delete(k);
-    if (eatenPellets) for (const k of eatenPellets) this.pellets.delete(k);
     if (animate) this._mouthPhase += 0.9;
   }
 
   setSearchTimeline(nodes) {
     if (!nodes || nodes.length === 0) return;
-    nodes.forEach((node, index) => {
-      this.setSearchNode(node, { keepEaten: true, animate: index === nodes.length - 1 });
-    });
+    this.setSearchNode(nodes.at(-1));
   }
 
   draw() {
@@ -242,15 +195,12 @@ export class PacmanRenderer {
 
   _drawGhosts() {
     const { ctx, cell } = this;
-    const blink = Math.floor(Date.now() / 250) % 2 === 0;
     for (const g of this.ghosts) {
       const [x, y] = this._px(g.pos);
       const r = cell * 0.4;
       const cx = x + cell / 2;
       const cy = y + cell / 2;
-      let color = g.color || GHOST_COLORS[0];
-      if (g.scared) color = blink ? SCARED_BLUE : SCARED_WHITE;
-      ctx.fillStyle = color;
+      ctx.fillStyle = g.color || GHOST_COLORS[0];
       ctx.beginPath();
       ctx.arc(cx, cy - r * 0.15, r, Math.PI, 0);
       const bottom = cy + r * 0.85;
@@ -295,7 +245,7 @@ export class PacmanRenderer {
         }
         if (i < nodes.length) {
           const node = nodes[i];
-          this.setSearchNode(node, { keepEaten: true });
+          this.setSearchNode(node);
           i++;
         }
         this.draw();

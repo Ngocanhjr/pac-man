@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import defaultdict
 
 from backend.game.layout import load_layout
 from backend.game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food
@@ -17,23 +17,33 @@ def test_path_to_farthest_does_not_expand_same_cell_twice():
     start = load_layout("small")
     problem = PathToPointProblem(start, farthest_food(start))
 
-    # IDS dùng path-checking + lặp DFS nhiều vòng nên CỐ Ý expand lại 1 ô ở các
-    # vòng/nhánh khác nhau — đó là bản chất thuật toán, không phải lỗi. Các thuật
-    # toán graph-search còn lại thì mỗi ô chỉ expand đúng 1 lần.
     for algo in SEARCH_ALGOS:
-        if algo == "ids":
-            continue
         result = run_static(problem, algo)
         expanded = [tuple(pos) for pos in result.visited_order]
         assert len(expanded) == len(set(expanded)), algo
 
 
-def test_eat_all_tree_exposes_food_left_for_repeated_positions():
-    start = load_layout("small")
-    result = SEARCH_ALGOS["bfs"](EatAllFoodProblem(start), record_tree=True)
+def expanded_state_keys(result):
+    return [
+        (tuple(node["pos"]), frozenset(map(tuple, node["food"])))
+        for node in result.tree
+        if node["expanded_order"] is not None
+    ]
 
-    repeated_positions = [pos for pos, count in Counter(tuple(n["pos"]) for n in result.tree).items() if count > 1]
 
-    assert repeated_positions
-    assert all("food_left" in node for node in result.tree)
-    assert all(node["food_left"] == len(node["food"]) for node in result.tree)
+def test_eat_all_does_not_expand_same_complete_state_twice():
+    start = load_layout("tiny")
+
+    for algo in SEARCH_ALGOS:
+        keys = expanded_state_keys(run_static(EatAllFoodProblem(start), algo))
+        assert len(keys) == len(set(keys)), algo
+
+
+def test_eat_all_keeps_same_position_with_different_food_sets():
+    result = SEARCH_ALGOS["bfs"](EatAllFoodProblem(load_layout("tiny")), record_tree=True)
+    food_sets_by_position_and_count = defaultdict(set)
+
+    for position, food in expanded_state_keys(result):
+        food_sets_by_position_and_count[(position, len(food))].add(food)
+
+    assert any(len(food_sets) > 1 for food_sets in food_sets_by_position_and_count.values())

@@ -148,15 +148,6 @@ body {
   100% { transform: scaleY(1) scaleX(1); filter: brightness(1); }
 }
 
-/* rung màn khi thua */
-.shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
-@keyframes shake {
-  10%, 90% { transform: translateX(-2px); }
-  20%, 80% { transform: translateX(4px); }
-  30%, 50%, 70% { transform: translateX(-7px); }
-  40%, 60% { transform: translateX(7px); }
-}
-
 /* ============================================================
    MARQUEE (biển hiệu phát sáng)
    ============================================================ */
@@ -276,7 +267,6 @@ table.compare th:first-child, table.compare td:first-child { text-align: left; }
 table.compare thead th { color: var(--color-inky); position: sticky; top: 0; background: #0a0a14; }
 table.compare td.best { color: var(--color-pac); text-shadow: 0 0 6px rgba(255,230,0,.6); }
 table.compare tbody tr:hover { background: rgba(255,176,0,.06); }
-table.compare tr.row-selected { background: rgba(33,33,222,.22); box-shadow: inset 0 0 0 1px rgba(120,140,255,.6); }
 
 /* ============================================================
    Tôn trọng giảm chuyển động

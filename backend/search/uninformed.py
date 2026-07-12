@@ -1,4 +1,4 @@
-"""Tìm kiếm MÙ (uninformed): BFS, DFS, UCS, IDS.
+"""Tìm kiếm MÙ (uninformed): BFS, DFS, UCS.
 
 Tất cả nhận một SearchProblem (xem game/problem.py) và trả về SearchResult.
 Dùng chung `state_key` của problem để tránh thăm lại trạng thái.
@@ -71,7 +71,6 @@ def bfs(problem: SearchProblem, record_tree: bool = False) -> SearchResult:
             frontier.append(child)
 
     return _failure(metrics, visited_order, tree)
-
 
 def dfs(problem: SearchProblem, depth_limit: Optional[int] = None, record_tree: bool = False) -> SearchResult:
     """Depth-First Search (dùng stack). Không tối ưu; có thể giới hạn độ sâu."""
@@ -162,48 +161,3 @@ def ucs(problem: SearchProblem, record_tree: bool = False) -> SearchResult:
                 metrics.generate()
 
     return _failure(metrics, visited_order, tree)
-
-
-def ids(problem: SearchProblem, max_depth: int = 100, record_tree: bool = False) -> SearchResult:
-    """Iterative Deepening Search: lặp DFS giới hạn độ sâu tăng dần.
-
-    Gộp metric của tất cả các vòng lặp để phản ánh tổng công sức tìm kiếm.
-    """
-    metrics = SearchMetrics().start()
-    def dls(node: Node, limit: int, explored: set, visited_order: list, tree: TreeRecorder, counter: list) -> Optional[Node]:
-        key = problem.state_key(node.state)
-        metrics.expand()
-        metrics.observe_depth(node.cost)
-        visited_order.append(node.state.pacman)
-        tree.expanded(node, 0.0)
-        if problem.is_goal(node.state):
-            return node
-        if limit <= 0:
-            return None
-        explored.add(key)
-        for action in problem.actions(node.state):
-            nxt = problem.result(node.state, action)
-            if problem.state_key(nxt) in explored:
-                continue
-            counter[0] += 1
-            child = Node(nxt, node, action, node.cost + problem.step_cost(node.state, action, nxt), counter[0])
-            tree.created(child, 0.0)
-            metrics.generate()
-            found = dls(child, limit - 1, explored, visited_order, tree, counter)
-            if found is not None:
-                return found
-        explored.discard(key)
-        return None
-
-    start = problem.initial_state()
-    for depth in range(max_depth + 1):
-        visited_order = []
-        tree = TreeRecorder(record_tree)
-        counter = [0]
-        start_node = Node(start)
-        tree.created(start_node, 0.0)
-        result = dls(start_node, depth, set(), visited_order, tree, counter)
-        if result is not None:
-            return _success(result, metrics, visited_order, tree)
-
-    return _failure(metrics, [], TreeRecorder(record_tree))

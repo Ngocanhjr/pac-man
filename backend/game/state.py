@@ -18,7 +18,6 @@ class Direction(str, Enum):
     DOWN = "DOWN"
     LEFT = "LEFT"
     RIGHT = "RIGHT"
-    STOP = "STOP"
 
 
 # Vector di chuyển (drow, dcol) cho từng hướng.
@@ -27,26 +26,22 @@ MOVES = {
     Direction.DOWN: (1, 0),
     Direction.LEFT: (0, -1),
     Direction.RIGHT: (0, 1),
-    Direction.STOP: (0, 0),
 }
 
 
 class Status(str, Enum):
     PLAYING = "playing"
     WIN = "win"
-    LOSE = "lose"
 
 
 @dataclass(frozen=True)
 class Ghost:
     pos: Position
-    direction: Direction = Direction.STOP
-    scared: bool = False
 
 
 @dataclass(frozen=True)
 class GameState:
-    """Trạng thái đầy đủ của trò chơi.
+    """Trạng thái của bài toán tìm kiếm tĩnh.
 
     `walls` và `width/height` là cố định theo bản đồ; ta vẫn lưu trong state
     để các hàm transition tự chứa thông tin, nhưng KHÔNG đưa vào hash/eq
@@ -58,7 +53,6 @@ class GameState:
     power_pellets: FrozenSet[Position]
     ghosts: Tuple[Ghost, ...] = ()
     score: int = 0
-    scared_timer: int = 0
     status: Status = Status.PLAYING
 
     # Thông tin bản đồ — loại khỏi so sánh để hash nhanh và đúng ngữ nghĩa.

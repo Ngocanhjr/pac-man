@@ -1,7 +1,7 @@
-// useRunner.js — Máy điều phối chạy thuật toán (port từ game.js bản vanilla).
+// useRunner.js — Máy điều phối chạy thuật toán tìm kiếm tĩnh.
 //
-// Nhận một ref tới PacmanRenderer. Cung cấp run/pause/step/reset/compare cho cả
-// 2 chế độ (tĩnh & đối kháng) + state hiển thị (status, stats, compareRows, busy).
+// Nhận một ref tới PacmanRenderer. Cung cấp chạy/pause/step/reset/compare cho
+// tìm kiếm tĩnh + state hiển thị (status, stats, compareRows, busy).
 //
 // Renderer chạy imperative (không re-render qua React) để animation mượt; hook
 // chỉ giữ các state cần hiển thị trên panel.
@@ -12,7 +12,7 @@ import { audio } from "../sound/audio";
 import { effects } from "../game/effects";
 
 const EMPTY_TREE_META = { truncated: false, limit: 0 };
-const PAUSE_POLL_MS = 60; // nhịp kiểm tra lại khi animation đang tạm dừng
+const EMPTY_STEP_STATE = { current: 0, total: null, complete: false };
 
 function staticKey(cfg) {
   return JSON.stringify({
@@ -23,31 +23,22 @@ function staticKey(cfg) {
   });
 }
 
-function adversarialKey(cfg) {
-  return JSON.stringify({
-    map: cfg.map,
-    algorithm: cfg.advAlgorithm,
-    depth: cfg.depth,
-  });
-}
-
 function expandedTreeNodes(solve) {
   return (solve?.tree || [])
     .filter((n) => n.expanded_order != null)
     .sort((a, b) => a.expanded_order - b.expanded_order);
 }
 
-export function useRunner(rendererRef, onLose) {
-  const [status, setStatus] = useState("Sẵn sàng");
+export function useRunner(rendererRef) {
+  const [status, setStatus] = useState("Ready");
   const [stats, setStats] = useState(null);     // {nodes_expanded, time_ms, ...}
-  const [scoreStat, setScoreStat] = useState(null);
   const [compareRows, setCompareRows] = useState([]);
-  const [compareMap, setCompareMap] = useState(null);
   const [tree, setTree] = useState([]);
   const [treeMeta, setTreeMeta] = useState(EMPTY_TREE_META);
   const [searchStep, setSearchStep] = useState(0); // số node cây đã hiện (đồng bộ board)
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
+  const [stepState, setStepState] = useState(EMPTY_STEP_STATE);
 
   // Cờ điều khiển animation (ref để không gây re-render).
   const stopRef = useRef(false);
@@ -57,9 +48,6 @@ export function useRunner(rendererRef, onLose) {
   // Lưu kết quả lần chạy gần nhất cho chế độ "Từng bước".
   const lastSolveRef = useRef(null);
   const lastSolveKeyRef = useRef(null);
-  const lastFramesRef = useRef(null);
-  const lastFramesKeyRef = useRef(null);
-  const stepIndexRef = useRef(0);
   // Bộ đếm tổng số bước đã đi (tất định) cho step tới/lui ở chế độ tĩnh.
   const staticStepRef = useRef(0);
 
@@ -90,10 +78,10 @@ export function useRunner(rendererRef, onLose) {
   }, [rendererRef]);
 
   // ---- Chạy chế độ tĩnh ----
-  const runStatic = useCallback(
+  const solveAndAnimate = useCallback(
     async (cfg) => {
       const r = rendererRef.current;
-      setStatus("Đang chạy " + cfg.algorithm + "...");
+      setStatus("Running " + cfg.algorithm + "...");
       const result = await Api.solve({
         map: cfg.map,
         algorithm: cfg.algorithm,
@@ -102,14 +90,12 @@ export function useRunner(rendererRef, onLose) {
       });
       lastSolveRef.current = result;
       lastSolveKeyRef.current = staticKey(cfg);
-      stepIndexRef.current = 0;
       setTree(result.tree || []);
       setTreeMeta({ truncated: !!result.tree_truncated, limit: result.tree_limit || 0 });
 
       if (!result.found) {
         setStats(result.stats);
-        setScoreStat(null);
-        setStatus("Không tìm thấy lời giải");
+        setStatus("No solution found");
         const lastNode = expandedTreeNodes(result).at(-1);
         r.visited = [];
         r.path = [];
@@ -131,75 +117,14 @@ export function useRunner(rendererRef, onLose) {
       await r.animatePath(result.path, delay, shouldStop, shouldPause);
 
       setStats(result.stats);
-      setScoreStat(null);
-      setStatus("Hoàn tất");
+      setStatus("Complete");
       audio.win();
     },
     [rendererRef, shouldStop, shouldPause, stepDelay]
   );
 
-  // ---- Chạy chế độ đối kháng ----
-  const playFrames = useCallback(
-    (frames, delay) =>
-      new Promise((resolve) => {
-        const r = rendererRef.current;
-        let i = 0;
-        const tick = () => {
-          if (shouldStop()) return resolve();
-          if (pausedRef.current) {
-            setTimeout(tick, PAUSE_POLL_MS);
-            return;
-          }
-          if (i >= frames.length) return resolve();
-          r.setState(frames[i]);
-          r.draw();
-          stepIndexRef.current = i;
-          i++;
-          setTimeout(tick, delay);
-        };
-        tick();
-      }),
-    [rendererRef, shouldStop]
-  );
-
-  const runAdversarial = useCallback(
-    async (cfg) => {
-      setStatus("Đang mô phỏng " + cfg.advAlgorithm + "...");
-      const result = await Api.adversarial({
-        map: cfg.map,
-        algorithm: cfg.advAlgorithm,
-        depth: cfg.depth,
-        max_steps: 200,
-      });
-      lastFramesRef.current = result.frames;
-      lastFramesKeyRef.current = adversarialKey(cfg);
-      stepIndexRef.current = 0;
-
-      const delay = stepDelay(cfg.speed);
-      await playFrames(result.frames, delay);
-
-      setStats({
-        nodes_expanded: result.stats.nodes_expanded,
-        time_ms: result.stats.time_ms,
-        path_length: result.stats.steps,
-        cost: null,
-        nodes_generated: null,
-        max_frontier: null,
-      });
-      setScoreStat(result.stats.final_score);
-      setStatus(result.stats.status === "win" ? "THẮNG" : result.stats.status === "lose" ? "THUA" : "Hết bước");
-      if (result.stats.status === "win") audio.win();
-      else if (result.stats.status === "lose") {
-        audio.lose();
-        effects.shake(10);
-        onLose && onLose();
-      }
-    },
-    [stepDelay, playFrames, onLose]
-  );
-
   // ---- Các hành động công khai ----
-  const run = useCallback(
+  const runStatic = useCallback(
     async (cfg) => {
       if (runningRef.current) return;
       const r = rendererRef.current;
@@ -210,29 +135,29 @@ export function useRunner(rendererRef, onLose) {
       stopRef.current = false;
       runningRef.current = true;
       staticStepRef.current = 0;
+      setStepState(EMPTY_STEP_STATE);
       setSearchStep(0);
       setBusy(true);
       setCompareRows([]);
       audio.start();
       try {
-        if (cfg.mode === "static") await runStatic(cfg);
-        else await runAdversarial(cfg);
+        await solveAndAnimate(cfg);
       } catch (e) {
-        setStatus("Lỗi: " + e.message);
+        setStatus("Error: " + e.message);
         console.error(e);
       } finally {
         runningRef.current = false;
         setBusy(false);
       }
     },
-    [rendererRef, wireRenderer, runStatic, runAdversarial]
+    [rendererRef, wireRenderer, solveAndAnimate]
   );
 
   const pause = useCallback(() => {
     if (!runningRef.current) return;
     pausedRef.current = !pausedRef.current;
     setPaused(pausedRef.current);
-    setStatus(pausedRef.current ? "Tạm dừng" : "Đang chạy...");
+    setStatus(pausedRef.current ? "Paused" : "Running...");
   }, []);
 
   const reset = useCallback(() => {
@@ -242,18 +167,14 @@ export function useRunner(rendererRef, onLose) {
     effects.clear();
     lastSolveRef.current = null;
     lastSolveKeyRef.current = null;
-    lastFramesRef.current = null;
-    lastFramesKeyRef.current = null;
-    stepIndexRef.current = 0;
     staticStepRef.current = 0;
+    setStepState(EMPTY_STEP_STATE);
     setSearchStep(0);
     setStats(null);
-    setScoreStat(null);
     setCompareRows([]);
-    setCompareMap(null);
     setTree([]);
     setTreeMeta(EMPTY_TREE_META);
-    setStatus("Đã đặt lại");
+    setStatus("Reset");
   }, [rendererRef, stopAnimation]);
 
   // Vẽ lại trạng thái tĩnh TẤT ĐỊNH tại một bước cụ thể (dùng cho tới/lui).
@@ -270,6 +191,7 @@ export function useRunner(rendererRef, onLose) {
       const total = treeNodes.length + path.length;
       const s = Math.max(0, Math.min(step, total));
       staticStepRef.current = s;
+      setStepState({ current: s, total, complete: s === total });
       setSearchStep(Math.min(s, treeNodes.length)); // cây chỉ mọc trong pha reveal
 
       // Dựng lại từ đầu để lùi được (food/pellet reset về ban đầu).
@@ -284,7 +206,7 @@ export function useRunner(rendererRef, onLose) {
           r.setSearchTimeline(treeNodes.slice(0, s));
         }
         r.draw();
-        setStatus(s === 0 ? "Bắt đầu" : `Chọn node ${s}/${treeNodes.length}`);
+        setStatus(s === 0 ? "Start" : `Node ${s}/${treeNodes.length}`);
         return;
       }
 
@@ -303,7 +225,7 @@ export function useRunner(rendererRef, onLose) {
       r.setPacman(cur, dir);
       r._mouthPhase += 0.9;
       r.draw();
-      setStatus(`Bước ${walk}/${path.length}`);
+      setStatus(`Step ${walk}/${path.length}`);
     },
     [rendererRef]
   );
@@ -317,6 +239,7 @@ export function useRunner(rendererRef, onLose) {
         lastSolveRef.current = null;
         lastSolveKeyRef.current = null;
         staticStepRef.current = 0;
+        setStepState(EMPTY_STEP_STATE);
         setSearchStep(0);
         setTree([]);
         setTreeMeta(EMPTY_TREE_META);
@@ -335,19 +258,21 @@ export function useRunner(rendererRef, onLose) {
           lastSolveRef.current = result;
           lastSolveKeyRef.current = key;
           staticStepRef.current = 0;
+          const total = expandedTreeNodes(result).length + (result.path || []).length;
+          setStepState({ current: 0, total, complete: !result.found });
           setSearchStep(0);
           setTree(result.tree || []);
           setTreeMeta({ truncated: !!result.tree_truncated, limit: result.tree_limit || 0 });
           r.reset();
           if (!result.found) {
             setStats(result.stats);
-            setStatus("Không tìm thấy");
+            setStatus("Not found");
             return;
           }
           setStats(result.stats);
           renderStaticAt(1);
         } catch (e) {
-          setStatus("Lỗi: " + e.message);
+          setStatus("Error: " + e.message);
           console.error(e);
         } finally {
           setBusy(false);
@@ -359,11 +284,11 @@ export function useRunner(rendererRef, onLose) {
       const total = expandedTreeNodes(solve).length + (solve.path || []).length;
       const next = staticStepRef.current + dir;
       if (next < 0) {
-        setStatus("Đã ở bước đầu");
+        setStatus("Already at the first step");
         return;
       }
       if (next > total) {
-        setStatus("Đã đi hết đường");
+        setStatus("End of path reached");
         return;
       }
       renderStaticAt(next);
@@ -372,76 +297,13 @@ export function useRunner(rendererRef, onLose) {
     [rendererRef, renderStaticAt]
   );
 
-  const stepAdversarial = useCallback(
-    async (cfg, dir = 1) => {
-      if (runningRef.current) return; // đang chạy auto -> không cho step chồng
-      const r = rendererRef.current;
-      const key = adversarialKey(cfg);
-      if (lastFramesKeyRef.current && lastFramesKeyRef.current !== key) {
-        lastFramesRef.current = null;
-        lastFramesKeyRef.current = null;
-        stepIndexRef.current = 0;
-      }
-      // Lần đầu (chưa mô phỏng): gọi API lấy frames, đứng ở frame 0.
-      if (!lastFramesRef.current) {
-        if (dir < 0) return;
-        setBusy(true);
-        try {
-          const result = await Api.adversarial({
-            map: cfg.map,
-            algorithm: cfg.advAlgorithm,
-            depth: cfg.depth,
-            max_steps: 200,
-          });
-          lastFramesRef.current = result.frames;
-          lastFramesKeyRef.current = key;
-          stepIndexRef.current = 0;
-          r.setState(result.frames[0]);
-          r.draw();
-          setStatus(`Frame 1/${result.frames.length} — bấm Bước tiếp (ma đi theo)`);
-        } catch (e) {
-          setStatus("Lỗi: " + e.message);
-          console.error(e);
-        } finally {
-          setBusy(false);
-        }
-        return;
-      }
-
-      const frames = lastFramesRef.current;
-      const next = stepIndexRef.current + dir;
-      if (next < 0) {
-        setStatus("Đã ở frame đầu");
-        return;
-      }
-      if (next >= frames.length) {
-        setStatus("Đã hết frame");
-        return;
-      }
-      // setState mỗi frame cập nhật CẢ Pac-man LẪN ma -> ma đi theo từng bước.
-      r.setState(frames[next]);
-      r.draw();
-      stepIndexRef.current = next;
-      setStatus(`Frame ${next + 1}/${frames.length}`);
-    },
-    [rendererRef]
-  );
-
-  const step = useCallback(
-    async (cfg, dir = 1) => {
-      if (cfg.mode === "static") await stepStatic(cfg, dir);
-      else await stepAdversarial(cfg, dir);
-    },
-    [stepStatic, stepAdversarial]
-  );
-
   const compare = useCallback(async (cfg) => {
     const algos =
       cfg.compareAlgos && cfg.compareAlgos.length
         ? cfg.compareAlgos
-        : ["bfs", "dfs", "ucs", "ids", "greedy", "astar"];
+        : ["bfs", "dfs", "ucs", "greedy", "astar"];
     setBusy(true);
-    setStatus("Đang so sánh " + algos.length + " thuật toán...");
+    setStatus("Comparing " + algos.length + " algorithms...");
     try {
       const result = await Api.compare({
         map: cfg.map,
@@ -450,10 +312,9 @@ export function useRunner(rendererRef, onLose) {
         problem: cfg.problem,
       });
       setCompareRows(result.results);
-      setCompareMap(result.map);
-      setStatus("So sánh xong");
+      setStatus("Comparison complete");
     } catch (e) {
-      setStatus("Lỗi so sánh: " + e.message);
+      setStatus("Comparison error: " + e.message);
       console.error(e);
     } finally {
       setBusy(false);
@@ -461,7 +322,10 @@ export function useRunner(rendererRef, onLose) {
   }, []);
 
   return {
-    status, stats, scoreStat, compareRows, compareMap, tree, treeMeta, searchStep, busy, paused,
-    run, pause, step, reset, compare, stopAnimation, setStatus,
+    status, stats, compareRows, tree, treeMeta, searchStep, busy, paused,
+    canStepBack: stepState.current > 0,
+    canStepNext: !stepState.complete,
+    isComplete: stepState.complete,
+    runStatic, pause, stepStatic, reset, compare, stopAnimation, setStatus,
   };
 }

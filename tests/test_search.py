@@ -11,7 +11,7 @@ from backend.search.heuristics import (
     null_heuristic,
 )
 from backend.search.informed import astar, greedy
-from backend.search.uninformed import bfs, dfs, ids, ucs
+from backend.search.uninformed import bfs, dfs, ucs
 
 # Hành lang thẳng: P tại (1,1), food tại (1,5). Đường tối ưu = 4 bước.
 CORRIDOR = """
@@ -63,12 +63,11 @@ def test_astar_expands_fewer_than_bfs_eat_all():
 
 
 def test_all_algorithms_consistent_eat_all():
-    # BFS, UCS, IDS, A* đều tối ưu -> cùng path_length cho bài ăn hết food.
+    # BFS, UCS, A* đều tối ưu -> cùng path_length cho bài ăn hết food.
     lengths = []
     for algo, args in [
         (bfs, ()),
         (ucs, ()),
-        (ids, ()),
         (astar, (farthest_food_dist,)),
     ]:
         r = algo(EatAllFoodProblem(parse_layout(SMALL)), *args)
@@ -131,10 +130,10 @@ def test_tree_empty_when_not_recording():
     assert r.tree == []
 
 
-def test_metrics_memory_and_depth():
+def test_metrics_depth_without_estimated_memory():
     s = parse_layout(SMALL)
     r = bfs(EatAllFoodProblem(s))
-    assert r.metrics.memory_kb >= 0
+    assert "memory_kb" not in r.metrics.to_dict()
     # search_depth = độ sâu lớn nhất của node ĐƯỢC EXPAND. BFS goal-test lúc sinh
     # node nên node đích không được expand -> depth có thể nhỏ hơn path_length 1.
     assert r.metrics.search_depth >= r.metrics.path_length - 1

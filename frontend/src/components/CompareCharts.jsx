@@ -1,7 +1,6 @@
 // CompareCharts.jsx — Biểu đồ so sánh vẽ tay bằng SVG (không thêm thư viện).
 //
-// Trái: line chart nodes_expanded + time_ms theo thứ tự thuật toán.
-// Phải: bar chart nodes_expanded vs memory_kb.
+// Line chart nodes_expanded + time_ms theo thứ tự thuật toán.
 // ponytail: SVG tay, đủ cho demo — thêm recharts nếu cần tương tác sâu.
 
 const W = 360;
@@ -68,32 +67,6 @@ function SingleLineChart({ title, names, values, color, unit }) {
   );
 }
 
-// Bar chart 1 series (bộ nhớ ước lượng) — trục riêng, không trộn với số node.
-function MemoryBarChart({ names, values, color }) {
-  const max = Math.max(1, ...values);
-  const n = values.length;
-  const slot = (W - PAD.l - PAD.r) / n;
-  const bw = slot * 0.5;
-  const base = scaleY(0, max);
-  return (
-    <div className="crt-panel p-3">
-      <h3 className="crt-label mb-1">Bộ nhớ ước lượng (KB)</h3>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        <Axis max={max} />
-        {values.map((v, i) => {
-          const cx = PAD.l + slot * i + slot / 2;
-          const y = scaleY(v, max);
-          return <rect key={i} x={cx - bw / 2} y={y} width={bw} height={base - y} fill={color} />;
-        })}
-        <Labels names={names} />
-      </svg>
-      <div className="crt-label text-[12px] flex gap-3 normal-case">
-        <span style={{ color }}>● Bộ nhớ (KB) — ước lượng từ frontier lớn nhất</span>
-      </div>
-    </div>
-  );
-}
-
 export function CompareCharts({ rows, algoInfo }) {
   const valid = (rows || []).filter((r) => !r.error && r.stats);
   if (valid.length === 0) return null;
@@ -101,12 +74,10 @@ export function CompareCharts({ rows, algoInfo }) {
   const names = valid.map(nameOf);
   const nodes = valid.map((r) => r.stats?.nodes_expanded ?? 0);
   const times = valid.map((r) => r.stats?.time_ms ?? 0);
-  const mem = valid.map((r) => r.stats?.memory_kb ?? 0);
   return (
-    <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-      <SingleLineChart title="Số node expand" names={names} values={nodes} color="var(--color-inky)" unit="Node expand" />
-      <SingleLineChart title="Thời gian (ms)" names={names} values={times} color="var(--color-time)" unit="Thời gian (ms)" />
-      <MemoryBarChart names={names} values={mem} color="var(--color-h)" />
+    <div className="grid gap-4 md:grid-cols-2">
+      <SingleLineChart title="Expanded nodes" names={names} values={nodes} color="var(--color-inky)" unit="Expanded nodes" />
+      <SingleLineChart title="Time (ms)" names={names} values={times} color="var(--color-time)" unit="Time (ms)" />
     </div>
   );
 }

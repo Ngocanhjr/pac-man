@@ -1,4 +1,4 @@
-"""Kiểm thử luật chơi: legal actions, transition (move_pacman), terminal test.
+"""Kiểm thử luật tĩnh: legal actions, transition (move_pacman), goal test.
 
 Chạy: py -3.12 -m pytest tests/test_rules.py -v
 """
@@ -6,7 +6,6 @@ from backend.game.layout import parse_layout
 from backend.game.rules import (
     FOOD_REWARD,
     PELLET_REWARD,
-    SCARED_DURATION,
     is_goal_static,
     move_pacman,
     pacman_legal_actions,
@@ -59,11 +58,10 @@ def test_move_eats_food_and_scores():
     assert s2.score == FOOD_REWARD - 1
 
 
-def test_move_eats_pellet_sets_scared():
+def test_move_eats_pellet():
     s = _start()
     s2 = move_pacman(s, Direction.DOWN)  # tới (2,1) có pellet
     assert (2, 1) not in s2.power_pellets
-    assert s2.scared_timer == SCARED_DURATION
     assert s2.score == PELLET_REWARD - 1
 
 

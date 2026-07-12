@@ -13,7 +13,7 @@ from __future__ import annotations
 import os
 from typing import List, Optional
 
-from .state import Direction, GameState, Ghost, Position, Status
+from .state import GameState, Ghost, Position, Status
 
 WALL = "%"
 FOOD = "."
@@ -35,7 +35,22 @@ def parse_layout(text: str) -> GameState:
         lines.pop()
 
     height = len(lines)
-    width = max(len(line) for line in lines) if lines else 0
+    width = len(lines[0]) if lines else 0
+
+    if any(len(line) != width for line in lines):
+        raise ValueError("Các dòng layout phải có cùng chiều rộng.")
+
+    pacman_count = sum(line.count(PACMAN) for line in lines)
+    if pacman_count != 1:
+        raise ValueError(
+            f"Layout phải có đúng một ký tự 'P'; tìm thấy {pacman_count}."
+        )
+
+    if (
+        any(ch != WALL for ch in lines[0] + lines[-1])
+        or any(line[0] != WALL or line[-1] != WALL for line in lines)
+    ):
+        raise ValueError("Viền ngoài phải kín bằng ký tự '%'.")
 
     walls = set()
     food = set()
@@ -55,10 +70,7 @@ def parse_layout(text: str) -> GameState:
             elif ch == PACMAN:
                 pacman = pos
             elif ch == GHOST:
-                ghosts.append(Ghost(pos=pos, direction=Direction.STOP))
-
-    if pacman is None:
-        raise ValueError("Layout phải có ký tự 'P' cho vị trí Pac-man.")
+                ghosts.append(Ghost(pos=pos))
 
     return GameState(
         pacman=pacman,
@@ -66,7 +78,6 @@ def parse_layout(text: str) -> GameState:
         power_pellets=frozenset(pellets),
         ghosts=tuple(ghosts),
         score=0,
-        scared_timer=0,
         status=Status.PLAYING,
         walls=frozenset(walls),
         width=width,
@@ -83,7 +94,7 @@ def load_layout(name: str) -> GameState:
 
 
 def list_maps() -> List[str]:
-    """Liệt kê tên các bản đồ khả dụng (bỏ đuôi .txt)."""
+    """Liệt kê các bản đồ dùng trong demo UI."""
     if not os.path.isdir(MAPS_DIR):
         return []
-    return sorted(f[:-4] for f in os.listdir(MAPS_DIR) if f.endswith(".txt"))
+    return [name for name in ("tiny", "small") if os.path.isfile(os.path.join(MAPS_DIR, f"{name}.txt"))]

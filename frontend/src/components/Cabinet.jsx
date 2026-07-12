@@ -5,9 +5,9 @@ const LEGEND = [
   ["Pac-man", "var(--color-pac)", true],
   ["Food", "var(--color-pellet)", true],
   ["Power pellet", "#FFF04D", true],
-  ["Ma", "var(--color-blinky)", false],
-  ["Ô đã duyệt", "rgba(0,255,255,0.5)", false],
-  ["Đường đi", "var(--color-pac)", false],
+  ["Ghost", "var(--color-blinky)", false],
+  ["Visited cell", "rgba(0,255,255,0.5)", false],
+  ["Path", "var(--color-pac)", false],
 ];
 
 export function Cabinet({ children }) {
@@ -19,7 +19,7 @@ export function Cabinet({ children }) {
           PAC-MAN A.I. SEARCH
         </h1>
         <p className="font-term text-[color:var(--color-inky)] text-[15px] sm:text-[18px] mt-2 text-glow-soft">
-          tìm kiếm mù · có thông tin · đối kháng
+          uninformed search · informed search · static search
         </p>
       </header>
 

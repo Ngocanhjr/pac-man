@@ -1,10 +1,9 @@
 // App.jsx — Orchestrator chính: nối renderer (canvas) + hooks điều phối + UI.
 //
 // - Tạo PacmanRenderer trên canvas (qua ref) và giữ trong rendererRef.
-// - Vòng lặp requestAnimationFrame: vẽ lại liên tục để hiệu ứng nhấp nháy
-//   (pellet, ma sợ, miệng Pac-man) luôn động, đồng thời cập nhật + vẽ particle
-//   và áp dụng screen-shake.
-// - Nạp bản đồ khi đổi map; điều phối run/pause/step/reset/compare qua useRunner.
+// - Vòng lặp requestAnimationFrame: vẽ lại liên tục để pellet và miệng Pac-man
+//   luôn động, đồng thời cập nhật + vẽ particle.
+// - Nạp bản đồ khi đổi map; điều phối chạy/pause/step/reset/compare qua useRunner.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Cabinet } from "./components/Cabinet";
@@ -26,12 +25,9 @@ import { useRunner } from "./hooks/useRunner";
 
 const DEFAULT_CFG = {
   map: "small",
-  mode: "static",
   problem: "eat_all",
   algorithm: "astar",
   heuristic: "farthest_food", // khớp bài eat_all; path_to_farthest sẽ tự đổi sang manhattan
-  advAlgorithm: "alphabeta",
-  depth: 3,
   speed: 12,
   runMode: "auto", // "auto" = tự chạy | "step" = bấm từng bước
   compareAlgos: ["astar", "greedy"],
@@ -40,25 +36,15 @@ const DEFAULT_CFG = {
 export default function App() {
   const canvasRef = useRef(null);
   const rendererRef = useRef(null);
-  const screenWrapRef = useRef(null);
 
   const meta = useMetadata();
   const [cfg, setCfg] = useState(DEFAULT_CFG);
   const [soundOn, setSoundOn] = useState(true);
   const [poweron, setPoweron] = useState(true);
   const [mapError, setMapError] = useState(null);
-  const [selectedRow, setSelectedRow] = useState(null);
   const [tab, setTab] = useState("play"); // "play" = chạy 1 thuật toán | "compare" = so sánh
 
-  const onLose = useCallback(() => {
-    const wrap = screenWrapRef.current;
-    if (!wrap) return;
-    wrap.classList.remove("shake");
-    void wrap.offsetWidth; // reflow để restart animation
-    wrap.classList.add("shake");
-  }, []);
-
-  const runner = useRunner(rendererRef, onLose);
+  const runner = useRunner(rendererRef);
 
   // Tạo renderer 1 lần khi canvas sẵn sàng + chạy vòng lặp vẽ.
   useEffect(() => {
@@ -67,7 +53,7 @@ export default function App() {
     const r = new PacmanRenderer(canvas);
     rendererRef.current = r;
 
-    // Tôn trọng "giảm chuyển động": bỏ particle + screen-shake (chỉ vẽ game).
+    // Tôn trọng "giảm chuyển động": bỏ particle, chỉ vẽ game.
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
     let raf;
@@ -77,12 +63,8 @@ export default function App() {
         r.draw();
       } else {
         effects.update();
-        const [dx, dy] = effects.shakeOffset();
-        ctx.save();
-        ctx.translate(dx, dy);
         r.draw();
         effects.draw(ctx);
-        ctx.restore();
       }
       raf = requestAnimationFrame(loop);
     };
@@ -124,13 +106,10 @@ export default function App() {
     audio.setEnabled(soundOn);
   }, [soundOn]);
 
-  const handleRun = useCallback(() => runner.run(cfg), [runner, cfg]);
-  const handleStep = useCallback(() => runner.step(cfg, 1), [runner, cfg]);
-  const handleStepBack = useCallback(() => runner.step(cfg, -1), [runner, cfg]);
-  const handleCompare = useCallback(() => {
-    setSelectedRow(null);
-    runner.compare(cfg);
-  }, [runner, cfg]);
+  const handleRun = useCallback(() => runner.runStatic(cfg), [runner, cfg]);
+  const handleStep = useCallback(() => runner.stepStatic(cfg, 1), [runner, cfg]);
+  const handleStepBack = useCallback(() => runner.stepStatic(cfg, -1), [runner, cfg]);
+  const handleCompare = useCallback(() => runner.compare(cfg), [runner, cfg]);
 
   // Props chung cho mọi lần render ControlDeck (tránh lặp ~15 dòng mỗi chỗ).
   const deckProps = {
@@ -143,6 +122,9 @@ export default function App() {
     setCfg,
     busy: runner.busy,
     paused: runner.paused,
+    canStepBack: runner.canStepBack,
+    canStepNext: runner.canStepNext,
+    isComplete: runner.isComplete,
     soundOn,
     onToggleSound: () => setSoundOn((s) => !s),
     onRun: handleRun,
@@ -156,7 +138,7 @@ export default function App() {
   const backendError = (meta.error || mapError) && (
     <div className="crt-panel p-3 font-term text-[18px]" style={{ color: "var(--color-clyde)" }}>
       {meta.error
-        ? `Không kết nối được backend (${Api.baseUrl}). Hãy chạy: py -3.12 -m uvicorn backend.api.main:app`
+        ? `Cannot connect to backend (${Api.baseUrl}). Run: py -3.12 -m uvicorn backend.api.main:app`
         : mapError}
     </div>
   );
@@ -169,13 +151,13 @@ export default function App() {
           className={`tab-btn ${tab === "play" ? "tab-on" : ""}`}
           onClick={() => setTab("play")}
         >
-          ▶ Chạy thuật toán
+          ▶ Run algorithm
         </button>
         <button
           className={`tab-btn ${tab === "compare" ? "tab-on" : ""}`}
           onClick={() => setTab("compare")}
         >
-          ⊞ So sánh thuật toán
+          ⊞ Compare algorithms
         </button>
       </div>
 
@@ -188,29 +170,26 @@ export default function App() {
             -> vừa bấm Bước tiếp vừa theo dõi cây mọc. */}
         <div className="grid gap-4 xl:grid-cols-[minmax(400px,540px)_minmax(560px,1fr)] items-start">
           <div className="flex flex-col gap-4">
-            <div ref={screenWrapRef}>
+            <div>
               <CRTScreen ref={canvasRef} poweron={poweron} />
             </div>
             <ControlDeck {...deckProps} section="run" />
           </div>
           <SearchTreePanel
             tree={runner.tree}
-            active={cfg.mode === "static"}
+            active
             step={runner.searchStep}
             treeMeta={runner.treeMeta}
+            problem={cfg.problem}
           />
         </div>
         {/* Hàng dưới: [cấu hình + mô hình bài toán] | [số liệu] */}
         <div className="grid gap-4 xl:grid-cols-[minmax(400px,540px)_minmax(560px,1fr)] items-start">
           <div className="flex flex-col gap-4">
             <ControlDeck {...deckProps} section="settings" />
-            <ProblemModelPanel mode={cfg.mode} problem={cfg.problem} />
+            <ProblemModelPanel problem={cfg.problem} />
           </div>
-          <StatsPanel
-            status={runner.status}
-            stats={runner.stats}
-            scoreStat={runner.scoreStat}
-          />
+          <StatsPanel stats={runner.stats} />
         </div>
       </div>
 
@@ -221,21 +200,16 @@ export default function App() {
               <>
                 <ComparisonView
                   rows={runner.compareRows}
-                  mapData={runner.compareMap}
                   algoInfo={meta.algoInfo}
+                  problem={cfg.problem}
                 />
-                <CompareTable
-                  rows={runner.compareRows}
-                  algoInfo={meta.algoInfo}
-                  onSelectAlgo={setSelectedRow}
-                  selectedAlgo={selectedRow?.algorithm}
-                />
-                {selectedRow && <FghChart row={selectedRow} algoInfo={meta.algoInfo} />}
+                <CompareTable rows={runner.compareRows} algoInfo={meta.algoInfo} />
+                <FghChart rows={runner.compareRows} algoInfo={meta.algoInfo} />
                 <CompareCharts rows={runner.compareRows} algoInfo={meta.algoInfo} />
               </>
             ) : (
               <div className="crt-panel p-4 crt-label">
-                Chọn các thuật toán bên phải rồi bấm "So sánh" để xem kết quả.
+                Select algorithms on the right, then click "Compare" to view results.
               </div>
             )}
           </div>

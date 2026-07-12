@@ -2,39 +2,38 @@
   "schema_version": 1,
   "diagram_type": "lifecycle",
   "meta": {
-    "title": "Pac-man Game State Lifecycle",
-    "subtitle": "State machine from map load to win/lose/timeout — search + adversarial modes",
+    "title": "Pac-man Static Search Lifecycle",
+    "subtitle": "From map load through search, playback, and terminal outcomes",
     "output": "lifecycle.html",
     "viewBox": [980, 660]
   },
   "lanes": [
-    { "id": "main", "label": "Game phases" },
-    { "id": "search", "label": "Search engine" },
-    { "id": "adversarial", "label": "Adversarial loop" },
-    { "id": "terminal", "label": "Terminal exits" }
+    { "id": "main", "label": "Application phases" },
+    { "id": "search", "label": "Search outcomes" },
+    { "id": "terminal", "label": "Terminal outcomes" }
   ],
   "states": [
-    { "id": "idle", "type": "start", "label": "Idle", "sublabel": "map loaded", "lane": "main", "col": 0, "step": "01", "tag": "init" },
-    { "id": "config", "type": "active", "label": "Configure", "sublabel": "algo/map/mode", "lane": "main", "col": 1, "step": "02", "tag": "UI" },
-    { "id": "solving", "type": "active", "label": "Solving", "sublabel": "search running", "lane": "main", "col": 2, "step": "03", "tag": "compute" },
-    { "id": "animating", "type": "active", "label": "Animating", "sublabel": "path playback", "lane": "main", "col": 3, "step": "04", "tag": "render" },
+    { "id": "idle", "type": "start", "label": "Ready", "sublabel": "map loaded", "lane": "main", "col": 0, "step": "01", "tag": "init" },
+    { "id": "config", "type": "active", "label": "Configure", "sublabel": "map/problem/algo", "lane": "main", "col": 1, "step": "02", "tag": "UI" },
+    { "id": "solving", "type": "active", "label": "Search", "sublabel": "static algorithm", "lane": "main", "col": 2, "step": "03", "tag": "compute" },
+    { "id": "rendering", "type": "active", "label": "Playback", "sublabel": "auto or step", "lane": "main", "col": 3, "step": "04", "tag": "render" },
     { "id": "done", "type": "success", "label": "Complete", "sublabel": "result shown", "lane": "main", "col": 4, "step": "05", "tag": "done" },
-    { "id": "expanding", "type": "waiting", "label": "Expanding", "sublabel": "BFS/A* loop", "lane": "search", "col": 0, "yOffset": -20, "tag": "tree walk" },
-    { "id": "nofound", "type": "failure", "label": "No Solution", "sublabel": "goal unreachable", "lane": "search", "col": 2, "yOffset": -20, "tag": "fail" },
-    { "id": "simulating", "type": "waiting", "label": "Simulating", "sublabel": "step-by-step", "lane": "adversarial", "col": 1, "yOffset": 40, "tag": "frames" },
-    { "id": "win", "type": "success", "label": "WIN", "sublabel": "all food eaten", "lane": "terminal", "col": 0, "tag": "terminal" },
-    { "id": "lose", "type": "failure", "label": "LOSE", "sublabel": "ghost caught", "lane": "terminal", "col": 1, "tag": "terminal" }
+    { "id": "expanding", "type": "waiting", "label": "Expanding", "sublabel": "OPEN → CLOSED", "lane": "search", "col": 0, "width": 118, "yOffset": -20, "tag": "tree" },
+    { "id": "solution", "type": "success", "label": "Solution Found", "sublabel": "goal reached", "lane": "search", "col": 1, "width": 118, "yOffset": -20, "tag": "path" },
+    { "id": "empty", "type": "failure", "label": "Frontier Empty", "sublabel": "goal unreachable", "lane": "search", "col": 2, "yOffset": -20, "tag": "fail" },
+    { "id": "goal", "type": "success", "label": "Goal", "sublabel": "path + stats", "lane": "terminal", "col": 1, "tag": "terminal" },
+    { "id": "nofound", "type": "failure", "label": "No Solution", "sublabel": "found = false", "lane": "terminal", "col": 2, "tag": "terminal" }
   ],
   "transitions": [
     { "from": "solving", "to": "expanding", "variant": "default", "fromSide": "bottom", "toSide": "top", "route": "straight" },
-    { "from": "expanding", "to": "nofound", "variant": "security" },
-    { "from": "solving", "to": "simulating", "variant": "dashed", "fromSide": "left", "toSide": "top", "via": [[340, 372], [402, 372]] },
-    { "from": "simulating", "to": "win", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "straight" },
-    { "from": "simulating", "to": "lose", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[430, 480], [556, 480]] }
+    { "from": "expanding", "to": "solution", "variant": "emphasis", "route": "bottom-channel" },
+    { "from": "expanding", "to": "empty", "variant": "security" },
+    { "from": "solution", "to": "goal", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "from": "empty", "to": "nofound", "variant": "security", "fromSide": "bottom", "toSide": "top", "route": "straight" }
   ],
   "cards": [
-    { "dot": "emerald", "title": "Main Path", "items": ["Idle → Configure → Solving → Animating → Complete", "Static mode: one search run, then animate path", "Compare mode: 6 algorithms in parallel, show table"] },
-    { "dot": "amber", "title": "Search Engine", "items": ["Expanding: BFS/DFS/UCS/IDS/Greedy/A* expand loop", "No Solution: frontier empty, goal unreachable", "Metrics collected during entire expand phase"] },
-    { "dot": "rose", "title": "Adversarial + Terminal", "items": ["Simulating: Minimax/AB/Expectimax frame-by-frame", "WIN: Status.WIN when all food eaten", "LOSE: Status.LOSE when ghost catches Pac-man"] }
+    { "dot": "emerald", "title": "Main Path", "items": ["Ready → Configure → Search → Playback → Complete", "Automatic mode animates search then path", "Step mode supports forward and backward boundaries"] },
+    { "dot": "amber", "title": "Search", "items": ["BFS/DFS/UCS/Greedy/A* expand static states", "Tree recording stops at 250 nodes; search continues", "Metrics cover nodes, frontier, time, path, and cost"] },
+    { "dot": "rose", "title": "Outcomes", "items": ["Solution Found provides path and stats", "Frontier Empty returns found = false", "Changing config resets cached step state"] }
   ]
 }

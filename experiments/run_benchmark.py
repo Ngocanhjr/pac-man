@@ -74,12 +74,10 @@ def run_one(map_name, problem_kind, algo):
 def main():
     rows = []
     maps = list_maps()
-    algos = list(SEARCH_INFO.keys())  # bfs, dfs, ucs, ids, greedy, astar
+    algos = list(SEARCH_INFO.keys())  # bfs, dfs, ucs, greedy, astar
 
-    # Không gian trạng thái của bài "ăn hết food" là 2^(số food). Chỉ map nhỏ
-    # (small ~ 2^21) là khả thi; medium (~2^70) và classic (~2^96) sẽ bùng nổ
-    # nên các map đó chỉ chạy bài "đi tới food gần nhất" (state space = số ô đi được).
-    EAT_ALL_MAPS = {"small"}
+    # Cả tiny và small đều nằm dưới guard 25 food của API.
+    EAT_ALL_MAPS = {"tiny", "small"}
 
     for map_name in maps:
         problems = ["path_to_farthest"]

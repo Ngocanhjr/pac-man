@@ -92,10 +92,6 @@ class ArcadeAudio {
     notes.forEach((f, i) => setTimeout(() => this._blip(f, 0.18, "square", 0.18), i * 120));
   }
 
-  lose() {
-    this._sweep(440, 80, 0.6, "sawtooth", 0.2);
-  }
-
   start() {
     this.coin();
   }

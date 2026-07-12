@@ -1,4 +1,4 @@
-// effects.js — Hiệu ứng game phủ lên canvas: particle khi ăn food + screen-shake.
+// effects.js — Hiệu ứng particle khi ăn food phủ lên canvas.
 //
 // Dùng chung hệ tọa độ pixel với PacmanRenderer (đã offset/cell). Renderer gọi
 // effects.spawnBurst(cx, cy) khi ăn, và effects.draw(ctx) ở cuối mỗi frame.
@@ -6,7 +6,6 @@
 class Effects {
   constructor() {
     this.particles = [];
-    this._shake = 0;
   }
 
   // Nổ chùm hạt nhỏ tại tâm (cx, cy) màu tùy chọn.
@@ -25,22 +24,6 @@ class Effects {
         size: 1.5 + Math.random() * 2,
       });
     }
-  }
-
-  shake(amount = 6) {
-    this._shake = Math.max(this._shake, amount);
-  }
-
-  // Trả về [dx, dy] dịch khung khi shake (gọi trước khi vẽ frame).
-  shakeOffset() {
-    if (this._shake <= 0.1) {
-      this._shake = 0;
-      return [0, 0];
-    }
-    const dx = (Math.random() - 0.5) * this._shake;
-    const dy = (Math.random() - 0.5) * this._shake;
-    this._shake *= 0.85;
-    return [dx, dy];
   }
 
   update() {
@@ -66,7 +49,6 @@ class Effects {
 
   clear() {
     this.particles = [];
-    this._shake = 0;
   }
 }
 

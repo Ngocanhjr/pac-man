@@ -38,5 +38,4 @@ export const Api = {
   getMap: (name) => _get(`/maps/${name}`),
   solve: (req) => _post("/solve", req),
   compare: (req) => _post("/compare", req),
-  adversarial: (req) => _post("/adversarial", req),
 };
