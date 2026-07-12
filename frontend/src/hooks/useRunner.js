@@ -23,22 +23,44 @@ function staticKey(cfg) {
   });
 }
 
+function compareKey(cfg) {
+  return JSON.stringify({
+    map: cfg.map,
+    algorithms: cfg.compareAlgos && cfg.compareAlgos.length ? [...cfg.compareAlgos].sort() : [],
+    heuristic: cfg.heuristic,
+    problem: cfg.problem,
+  });
+}
+
 function expandedTreeNodes(solve) {
   return (solve?.tree || [])
     .filter((n) => n.expanded_order != null)
     .sort((a, b) => a.expanded_order - b.expanded_order);
 }
 
+function lastTreeStep(tree) {
+  const steps = (tree || [])
+    .map((n) => n.expanded_order)
+    .filter((n) => n != null);
+  return steps.length ? Math.max(...steps) + 1 : 0;
+}
+
+function compareTotal(rows) {
+  return (rows || []).reduce((max, row) => Math.max(max, lastTreeStep(row.tree)), 0);
+}
+
 export function useRunner(rendererRef) {
   const [status, setStatus] = useState("Ready");
   const [stats, setStats] = useState(null);     // {nodes_expanded, time_ms, ...}
   const [compareRows, setCompareRows] = useState([]);
+  const [compareTreeStep, setCompareTreeStep] = useState(null);
   const [tree, setTree] = useState([]);
   const [treeMeta, setTreeMeta] = useState(EMPTY_TREE_META);
   const [searchStep, setSearchStep] = useState(0); // số node cây đã hiện (đồng bộ board)
   const [busy, setBusy] = useState(false);
   const [paused, setPaused] = useState(false);
   const [stepState, setStepState] = useState(EMPTY_STEP_STATE);
+  const [compareStepState, setCompareStepState] = useState(EMPTY_STEP_STATE);
 
   // Cờ điều khiển animation (ref để không gây re-render).
   const stopRef = useRef(false);
@@ -48,8 +70,11 @@ export function useRunner(rendererRef) {
   // Lưu kết quả lần chạy gần nhất cho chế độ "Từng bước".
   const lastSolveRef = useRef(null);
   const lastSolveKeyRef = useRef(null);
+  const lastCompareKeyRef = useRef(null);
   // Bộ đếm tổng số bước đã đi (tất định) cho step tới/lui ở chế độ tĩnh.
   const staticStepRef = useRef(0);
+  const compareStepRef = useRef(0);
+  const compareTotalRef = useRef(0);
 
   const stepDelay = useCallback((speed) => {
     const sps = Math.max(1, speed || 12);
@@ -139,6 +164,11 @@ export function useRunner(rendererRef) {
       setSearchStep(0);
       setBusy(true);
       setCompareRows([]);
+      setCompareTreeStep(null);
+      setCompareStepState(EMPTY_STEP_STATE);
+      lastCompareKeyRef.current = null;
+      compareStepRef.current = 0;
+      compareTotalRef.current = 0;
       audio.start();
       try {
         await solveAndAnimate(cfg);
@@ -172,6 +202,11 @@ export function useRunner(rendererRef) {
     setSearchStep(0);
     setStats(null);
     setCompareRows([]);
+    setCompareTreeStep(null);
+    lastCompareKeyRef.current = null;
+    compareStepRef.current = 0;
+    compareTotalRef.current = 0;
+    setCompareStepState(EMPTY_STEP_STATE);
     setTree([]);
     setTreeMeta(EMPTY_TREE_META);
     setStatus("Reset");
@@ -312,6 +347,11 @@ export function useRunner(rendererRef) {
         problem: cfg.problem,
       });
       setCompareRows(result.results);
+      lastCompareKeyRef.current = compareKey(cfg);
+      compareTotalRef.current = compareTotal(result.results);
+      compareStepRef.current = compareTotalRef.current;
+      setCompareStepState({ current: compareStepRef.current, total: compareTotalRef.current, complete: true });
+      setCompareTreeStep(null);
       setStatus("Comparison complete");
     } catch (e) {
       setStatus("Comparison error: " + e.message);
@@ -321,11 +361,115 @@ export function useRunner(rendererRef) {
     }
   }, []);
 
+  const loadCompareRows = useCallback(async (cfg) => {
+    const algos =
+      cfg.compareAlgos && cfg.compareAlgos.length
+        ? cfg.compareAlgos
+        : ["bfs", "dfs", "ucs", "greedy", "astar"];
+    const result = await Api.compare({
+      map: cfg.map,
+      algorithms: algos,
+      heuristic: cfg.heuristic,
+      problem: cfg.problem,
+    });
+    setCompareRows(result.results);
+    lastCompareKeyRef.current = compareKey(cfg);
+    compareTotalRef.current = compareTotal(result.results);
+    return result.results;
+  }, []);
+
+  const waitForCompareTick = useCallback(async (delay) => {
+    let remaining = delay;
+    let last = Date.now();
+    while (!shouldStop() && remaining > 0) {
+      if (shouldPause()) {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        last = Date.now();
+        continue;
+      }
+      const now = Date.now();
+      remaining -= now - last;
+      last = now;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+  }, [shouldStop, shouldPause]);
+
+  const renderCompareAt = useCallback((step) => {
+    const total = compareTotalRef.current;
+    const s = Math.max(0, Math.min(step, total));
+    compareStepRef.current = s;
+    setCompareTreeStep(s);
+    setCompareStepState({ current: s, total, complete: s === total });
+    setStatus(s === 0 ? "Comparison start" : `Comparison tree step ${s}/${total}`);
+  }, []);
+
+  const runCompareTree = useCallback(async (cfg) => {
+    if (runningRef.current) return;
+    stopRef.current = false;
+    pausedRef.current = false;
+    runningRef.current = true;
+    setPaused(false);
+    setBusy(true);
+    setStatus("Preparing comparison tree...");
+    try {
+      await loadCompareRows(cfg);
+      compareStepRef.current = 0;
+      setCompareTreeStep(0);
+      setCompareStepState({ current: 0, total: compareTotalRef.current, complete: compareTotalRef.current === 0 });
+      const delay = stepDelay(cfg.speed);
+      for (let s = 1; s <= compareTotalRef.current; s++) {
+        if (shouldStop()) return;
+        renderCompareAt(s);
+        await waitForCompareTick(delay);
+      }
+      setStatus("Comparison tree complete");
+      audio.win();
+    } catch (e) {
+      setStatus("Comparison error: " + e.message);
+      console.error(e);
+    } finally {
+      runningRef.current = false;
+      setBusy(false);
+    }
+  }, [loadCompareRows, renderCompareAt, shouldStop, stepDelay, waitForCompareTick]);
+
+  const stepCompareTree = useCallback(async (cfg, dir = 1) => {
+    if (runningRef.current) return;
+    const key = compareKey(cfg);
+    if (lastCompareKeyRef.current !== key || !compareTotalRef.current) {
+      if (dir < 0) return;
+      setBusy(true);
+      try {
+        await loadCompareRows(cfg);
+        compareStepRef.current = 0;
+        setCompareTreeStep(0);
+        setCompareStepState({ current: 0, total: compareTotalRef.current, complete: compareTotalRef.current === 0 });
+      } catch (e) {
+        setStatus("Comparison error: " + e.message);
+        console.error(e);
+      } finally {
+        setBusy(false);
+      }
+    }
+    const next = compareStepRef.current + dir;
+    if (next < 0) {
+      setStatus("Already at the first comparison step");
+      return;
+    }
+    if (next > compareTotalRef.current) {
+      setStatus("Comparison tree complete");
+      return;
+    }
+    renderCompareAt(next);
+  }, [loadCompareRows, renderCompareAt]);
+
   return {
-    status, stats, compareRows, tree, treeMeta, searchStep, busy, paused,
+    status, stats, compareRows, compareTreeStep, tree, treeMeta, searchStep, busy, paused,
     canStepBack: stepState.current > 0,
     canStepNext: !stepState.complete,
+    compareCanStepBack: compareStepState.current > 0,
+    compareCanStepNext: !compareStepState.complete,
     isComplete: stepState.complete,
-    runStatic, pause, stepStatic, reset, compare, stopAnimation, setStatus,
+    runStatic, pause, stepStatic, reset, compare, runCompareTree, stepCompareTree, stopAnimation, setStatus,
   };
 }

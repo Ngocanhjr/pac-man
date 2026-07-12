@@ -35,7 +35,7 @@ function QuickStats({ rows, algoInfo }) {
   );
 }
 
-export function ComparisonView({ rows, algoInfo, problem }) {
+export function ComparisonView({ rows, algoInfo, problem, treeStep }) {
   if (!rows || rows.length === 0) return null;
 
   const cols = rows.length <= 1 ? "grid-cols-1" : "grid-cols-1 2xl:grid-cols-2";
@@ -58,6 +58,7 @@ export function ComparisonView({ rows, algoInfo, problem }) {
               subtitle={r.error ? r.error : statLine(r)}
               treeMeta={{ truncated: !!r.tree_truncated, limit: r.tree_limit || 0 }}
               problem={problem}
+              step={treeStep}
             />
           ))}
         </div>

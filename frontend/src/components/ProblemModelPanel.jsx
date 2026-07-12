@@ -5,41 +5,38 @@
 // Nội dung theo từng bài toán. Mỗi mục là [nhãn, mô tả].
 const MODELS = {
   eat_all: {
-    title: "STATIC problem — Eat all food",
+    title: "Description of the state space — Eat all food",
     rows: [
-      ["State", "(p, F)"],
-      ["Initial", "(p₀, F₀)"],
-      ["Goal test", "(p, ∅)"],
-      ["State space", "S = {(p, F) | p ∈ V, F ⊆ F₀}"],
-      ["Upper bound", "|S| ≤ |V| × 2^|F₀|"],
+      // ["State", "(p, F)"],
+      ["Initial State", "((1,1), F₀)"],
+      ["Goal State", "((x,y), ∅)"],
       ["Actions", "move UP / DOWN / LEFT / RIGHT (excluding walls)"],
       ["Path cost", "each step costs 1 → optimal means the fewest steps"],
     ],
     dedup: {
-      key: "state_key = (Pac-man cell, remaining food set)",
+      key: "state_key = ((x,y), F)",
       lines: [
         "Discard a child only when its complete state_key has already appeared.",
         "Same p but different F means a different state, so keep it.",
       ],
     },
-    note: "V is the set of traversable cells; F₀ is the initial food set.",
+    note: "p = Pac-man cell; F₀ is the initial food set; ∅ means no food remains.",
   },
   path_to_farthest: {
-    title: "STATIC problem — Reach the farthest food",
+    title: "Description of the state space — Reach the farthest food",
     rows: [
-      ["State", "p = (x, y)"],
-      ["Initial", "p₀"],
-      ["Goal test", "p = g"],
+      ["Initial State", "p = (1,1)"],
+      ["Goal State", "p = (x_goal, y_goal)"],
       ["Actions", "move UP / DOWN / LEFT / RIGHT (excluding walls)"],
       ["Path cost", "each step costs 1 → optimal means the shortest path to the goal"],
     ],
     dedup: {
-      key: "state_key = Pac-man cell",
+      key: "state_key = p = (x,y)",
       lines: [
         "Discard a child only when its complete state_key = p has already appeared.",
       ],
     },
-    note: "A distant goal creates a longer path and highlights differences between algorithms.",
+    note: "p is Pac-man's current cell; (x_goal, y_goal) is the farthest food position.",
   },
 };
 
@@ -53,7 +50,7 @@ export function ProblemModelPanel({ problem }) {
       </h2>
       <dl className="font-term text-[15px] flex flex-col gap-1.5">
         {model.rows.map(([label, desc]) => (
-          <div key={label} className="grid grid-cols-[92px_1fr] gap-2 items-baseline">
+          <div key={label} className="grid grid-cols-[120px_1fr] gap-2 items-baseline">
             <dt className="text-[color:var(--color-inky)] font-semibold">{label}</dt>
             <dd className="text-[color:var(--color-amber)] m-0">{desc}</dd>
           </div>

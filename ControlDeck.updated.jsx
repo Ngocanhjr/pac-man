@@ -1,6 +1,6 @@
 // ControlDeck.updated.jsx
 // ------------------------------------------------------------
-// File này là source code của BẢNG ĐIỀU KHIỂN bên phải giao diện của cả 2 tab run và compare.
+// File này là source code của BẢNG ĐIỀU KHIỂN bên phải giao diện.
 // Nó quản lý:
 // 1. Chọn map, problem, algorithm, heuristic.
 // 2. Bật/tắt âm thanh.

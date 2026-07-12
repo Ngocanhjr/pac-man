@@ -106,9 +106,18 @@ export default function App() {
     audio.setEnabled(soundOn);
   }, [soundOn]);
 
-  const handleRun = useCallback(() => runner.runStatic(cfg), [runner, cfg]);
-  const handleStep = useCallback(() => runner.stepStatic(cfg, 1), [runner, cfg]);
-  const handleStepBack = useCallback(() => runner.stepStatic(cfg, -1), [runner, cfg]);
+  const handleRun = useCallback(() => {
+    if (tab === "compare") return runner.runCompareTree(cfg);
+    return runner.runStatic(cfg);
+  }, [runner, cfg, tab]);
+  const handleStep = useCallback(() => {
+    if (tab === "compare") return runner.stepCompareTree(cfg, 1);
+    return runner.stepStatic(cfg, 1);
+  }, [runner, cfg, tab]);
+  const handleStepBack = useCallback(() => {
+    if (tab === "compare") return runner.stepCompareTree(cfg, -1);
+    return runner.stepStatic(cfg, -1);
+  }, [runner, cfg, tab]);
   const handleCompare = useCallback(() => runner.compare(cfg), [runner, cfg]);
 
   // Props chung cho mọi lần render ControlDeck (tránh lặp ~15 dòng mỗi chỗ).
@@ -122,8 +131,8 @@ export default function App() {
     setCfg,
     busy: runner.busy,
     paused: runner.paused,
-    canStepBack: runner.canStepBack,
-    canStepNext: runner.canStepNext,
+    canStepBack: tab === "compare" ? runner.compareCanStepBack : runner.canStepBack,
+    canStepNext: tab === "compare" ? runner.compareCanStepNext : runner.canStepNext,
     isComplete: runner.isComplete,
     soundOn,
     onToggleSound: () => setSoundOn((s) => !s),
@@ -202,6 +211,7 @@ export default function App() {
                   rows={runner.compareRows}
                   algoInfo={meta.algoInfo}
                   problem={cfg.problem}
+                  treeStep={runner.compareTreeStep}
                 />
                 <CompareTable rows={runner.compareRows} algoInfo={meta.algoInfo} />
                 <FghChart rows={runner.compareRows} algoInfo={meta.algoInfo} />

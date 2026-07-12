@@ -414,7 +414,7 @@ function TreeLegend({ problem }) {
   );
 }
 
-export function SearchTreePreview({ tree, title, subtitle, treeMeta, problem }) {
+export function SearchTreePreview({ tree, title, subtitle, treeMeta, problem, step }) {
   if (!tree || tree.length === 0) {
     return (
       <div className="crt-panel p-3">
@@ -425,7 +425,7 @@ export function SearchTreePreview({ tree, title, subtitle, treeMeta, problem }) 
     );
   }
 
-  const step = lastTreeStep(tree);
+  const displayStep = step == null ? lastTreeStep(tree) : step;
 
   return (
     <div className="crt-panel p-3 flex flex-col gap-2">
@@ -440,8 +440,8 @@ export function SearchTreePreview({ tree, title, subtitle, treeMeta, problem }) 
           </span>
         )}
       </div>
-      <TreeCounters tree={tree} step={step} />
-      <TreeSvg tree={tree} step={step} problem={problem} heightClass="h-[340px]" />
+      <TreeCounters tree={tree} step={displayStep} />
+      <TreeSvg tree={tree} step={displayStep} problem={problem} heightClass="h-[340px]" />
     </div>
   );
 }

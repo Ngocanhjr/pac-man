@@ -1,10 +1,11 @@
 // StatsPanel.jsx — Bảng số liệu phosphor amber (đọc như terminal CRT).
+//algorithm metrics
 
 // [nhãn, key, chú thích (hover)] — chú thích giúp người xem hiểu ý nghĩa số liệu.
 const ROWS = [
-  ["Expanded nodes", "nodes_expanded", "Nodes removed from the frontier for expansion"],
-  ["Generated nodes", "nodes_generated", "Child nodes generated during search"],
-  ["Maximum frontier", "max_frontier", "Largest open-list size — a space-complexity indicator"],
+  // ["Expanded nodes", "nodes_expanded", "Nodes removed from the frontier for expansion"],
+  // ["Generated nodes", "nodes_generated", "Child nodes generated during search"],
+  // ["Maximum frontier", "max_frontier", "Largest open-list size — a space-complexity indicator"],
   ["Time (ms)", "time_ms", "Algorithm runtime"],
   ["Path length", "path_length", "Number of steps in the solution"],
   ["Cost", "cost", "Total path cost (each step costs 1)"],
