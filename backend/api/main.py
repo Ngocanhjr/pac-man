@@ -62,7 +62,7 @@ def build_problem(start: GameMap, kind: str):
 # food ít. Chặn sớm để tránh treo server trên bản đồ lớn (medium/classic).
 EAT_ALL_MAX_FOOD = 25
 # Heuristic phải khớp loại bài toán, nếu không nó trả 0 và A*/Greedy suy biến:
-#   - goal_manhattan (name "manhattan") chỉ có tác dụng cho path_to_farthest.
+#   - goal_manhattan (name "manhattan") chỉ có tác dụng cho path_to_cell.
 #   - các heuristic dựa trên food chỉ có tác dụng cho eat_all.
 # Nếu người dùng chọn heuristic trả 0 cho bài toán đang chạy, tự thay bằng
 # heuristic mặc định hợp lý để A* thật sự dùng thông tin (không lặng lẽ = UCS).
@@ -73,12 +73,12 @@ _ZERO_FOR_PATH = {"nearest_food", "farthest_food", "food_count"}
 def resolve_heuristic(heuristic_name: str, problem_kind: str) -> str:
     if problem_kind == "eat_all" and heuristic_name in _ZERO_FOR_EAT_ALL:
         return "farthest_food"  # admissible -> A* tối ưu và expand ít hơn UCS
-    if problem_kind == "path_to_farthest" and heuristic_name in _ZERO_FOR_PATH:
+    if problem_kind == "path_to_cell" and heuristic_name in _ZERO_FOR_PATH:
         return "manhattan"
     return heuristic_name
 
 
-def run_static(map_name: str, algo: str, heuristic_name: str, problem_kind: str):
+def run_static(map_name: str, algo: str, heuristic_name: str, problem_kind: str, goal=None):
     try:
         start = load_layout(map_name)
     except FileNotFoundError:
@@ -98,7 +98,7 @@ def run_static(map_name: str, algo: str, heuristic_name: str, problem_kind: str)
             f"'đi tới food xa nhất' cho bản đồ lớn.",
         )
 
-    problem = build_problem(start, problem_kind)
+    problem = build_problem(start, problem_kind, goal)
     fn = SEARCH_ALGOS[algo]
 
     if is_informed(algo):
@@ -133,7 +133,7 @@ def get_map(name: str):
 
 @app.post("/solve")
 def solve(req: SolveRequest):
-    result = run_static(req.map, req.algorithm, req.heuristic, req.problem)
+    result = run_static(req.map, req.algorithm, req.heuristic, req.problem, req.goal)
     start = load_layout(req.map)
     return {
         "map": serialize_map(start),
@@ -148,7 +148,7 @@ def compare(req: CompareRequest):
     rows: List[Dict] = []
     for algo in req.algorithms:
         try:
-            result = run_static(req.map, algo, req.heuristic, req.problem)
+            result = run_static(req.map, algo, req.heuristic, req.problem, req.goal)
         except HTTPException as e:
             rows.append({"algorithm": algo, "error": e.detail})
             continue

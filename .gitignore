@@ -27,3 +27,4 @@ dist-ssr
 __pycache__/
 frontend/node_modules/
 .venv/
+venv/

@@ -1,38 +1,45 @@
-// Cabinet.jsx — Khung "thùng game arcade": marquee phát sáng trên cùng + legend
-// chú thích các ký hiệu trong maze. Bọc nội dung con (màn hình + panel).
-
 const LEGEND = [
-  ["Pac-man", "var(--color-pac)", true],
+  ["Pac-Man", "var(--color-pac)", true],
   ["Food", "var(--color-pellet)", true],
   ["Power pellet", "#FFF04D", true],
-  ["Ghost", "var(--color-blinky)", false],
-  ["Visited cell", "rgba(0,255,255,0.5)", false],
+  ["Ghost", "var(--state-current)", false],
+  ["Explored cell", "var(--color-g)", false],
   ["Path", "var(--color-pac)", false],
 ];
 
-export function Cabinet({ children }) {
+export function Cabinet({ children, tab, onTabChange, soundOn, onToggleSound, theme, onToggleTheme }) {
   return (
-    <div className="min-h-screen px-4 py-6 flex flex-col items-center">
-      {/* MARQUEE */}
-      <header className="text-center mb-6 select-none">
-        <h1 className="marquee-title text-[clamp(13px,2.6vw,26px)]">
-          PAC-MAN A.I. SEARCH
-        </h1>
-        <p className="font-term text-[color:var(--color-inky)] text-[15px] sm:text-[18px] mt-2 text-glow-soft">
-          uninformed search · informed search · static search
-        </p>
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
+      <header className="app-header">
+        <div className="brand-block">
+          <strong>PAC-MAN</strong>
+          <span>AI Search Lab</span>
+        </div>
+        <nav className="top-tabs" role="tablist" aria-label="Workspace">
+          <button type="button" role="tab" aria-selected={tab === "play"} className={tab === "play" ? "is-active" : ""} onClick={() => onTabChange("play")}>
+            Run
+          </button>
+          <button type="button" role="tab" aria-selected={tab === "compare"} className={tab === "compare" ? "is-active" : ""} onClick={() => onTabChange("compare")}>
+            Compare
+          </button>
+        </nav>
+        <div className="header-actions">
+          <button type="button" className="text-toggle" aria-pressed={soundOn} onClick={onToggleSound}>
+            Sound: {soundOn ? "On" : "Off"}
+          </button>
+          <button type="button" className="text-toggle" onClick={onToggleTheme}>
+            Theme: {theme === "dark" ? "Dark" : "Light"}
+          </button>
+        </div>
       </header>
 
-      <div className="w-full max-w-[1800px]">{children}</div>
+      <main id="main-content" className="app-content">{children}</main>
 
-      {/* LEGEND */}
-      <footer className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2 font-term text-[18px] text-[color:var(--color-amber-dim)]">
+      <footer className="app-legend" aria-label="Map legend">
         {LEGEND.map(([label, color, round]) => (
-          <span key={label} className="inline-flex items-center gap-2">
-            <i
-              className="inline-block w-3.5 h-3.5"
-              style={{ background: color, borderRadius: round ? "50%" : "3px" }}
-            />
+          <span key={label}>
+            <i style={{ background: color, borderRadius: round ? "50%" : "3px" }} />
             {label}
           </span>
         ))}

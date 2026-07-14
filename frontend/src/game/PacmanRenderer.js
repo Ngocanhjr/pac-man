@@ -1,10 +1,10 @@
-// PacmanRenderer.js — Lớp vẽ trò chơi Pac-man lên canvas 2D (imperative).
+// PacmanRenderer.js — Class that draws the Pac-man game onto a 2D canvas (imperative).
 //
-// Tọa độ dữ liệu là (row, col). Khi vẽ: x = col * cell, y = row * cell.
-// Renderer tự tính cell size để vừa khung canvas và căn giữa bản đồ.
-// Dùng trong React qua ref để animation không phụ thuộc chu kỳ render component.
+// Data coordinates are (row, col). When drawing: x = col * cell, y = row * cell.
+// The renderer computes its own cell size to fit the canvas and center the map.
+// Used in React via a ref so animation doesn't depend on the component render cycle.
 
-// Bảng màu arcade gốc (đồng bộ với @theme trong index.css).
+// Original arcade color palette (kept in sync with @theme in index.css).
 const GHOST_COLORS = ["#FF0000", "#FFB8FF", "#00FFFF", "#FFB852"];
 const WALL_FILL = "#0a0f3a";
 const WALL_STROKE = "#2121DE";
@@ -12,9 +12,9 @@ const FOOD_COLOR = "#FFB897";
 const PELLET_ON = "#FFF04D";
 const PELLET_OFF = "#9c8e2a";
 const PAC_COLOR = "#FFE600";
-const VISITED_RGB = "0, 255, 255"; // inky cyan cho lớp "đã duyệt"
+const VISITED_RGB = "0, 255, 255"; // inky cyan for the "visited" layer
 const PATH_COLOR = "rgba(255, 230, 0, 0.85)";
-const PAUSE_POLL_MS = 60; // nhịp kiểm tra lại khi animation đang tạm dừng
+const PAUSE_POLL_MS = 60; // recheck interval while animation is paused
 
 export class PacmanRenderer {
   constructor(canvas) {
@@ -25,6 +25,7 @@ export class PacmanRenderer {
 
     this.visited = [];
     this.path = [];
+    this.goal = null; // target cell chosen by user click (path_to_cell exercise)
 
     this.pacman = null;
     this.pacDir = "RIGHT";
@@ -36,8 +37,9 @@ export class PacmanRenderer {
     this.offsetX = 0;
     this.offsetY = 0;
     this._mouthPhase = 0;
+    this.reducedMotion = false;
 
-    // Hook hiệu ứng: gọi khi Pac-man ăn food/pellet (gán từ ngoài).
+    // Effects hook: called when Pac-man eats food/pellet (assigned externally).
     this.onEat = null; // (centerX, centerY, isPellet) => void
   }
 
@@ -82,17 +84,79 @@ export class PacmanRenderer {
     if (dir) this.pacDir = dir;
   }
 
-  setSearchNode(node, { animate = true } = {}) {
+  setGoal(rc) {
+    this.goal = rc ? rc.slice() : null;
+    this.draw();
+  }
+
+  clearGoal() {
+    this.goal = null;
+    this.draw();
+  }
+
+  nextGoalCell(current, key) {
+    if (!this.map) return null;
+    const delta = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    }[key];
+    const start = current || this.goal || this.pacman || this.map.pacman_start;
+    if (!delta || !start) return start ? start.slice() : null;
+    const next = [start[0] + delta[0], start[1] + delta[1]];
+    const valid = next[0] >= 0 && next[0] < this.map.height
+      && next[1] >= 0 && next[1] < this.map.width
+      && !this._walls.has(this._key(next));
+    return valid ? next : start.slice();
+  }
+
+  // Converts pointer coordinates (clientX/Y) -> cell [row, col] on the map.
+  // The canvas may be CSS-scaled, so we must scale by getBoundingClientRect.
+  // Returns null if outside the map or on a wall (invalid cell for a target).
+  pixelToCell(clientX, clientY) {
+    if (!this.map) return null;
+    const rect = this.canvas.getBoundingClientRect();
+    const sx = this.canvas.width / rect.width;
+    const sy = this.canvas.height / rect.height;
+    const x = (clientX - rect.left) * sx;
+    const y = (clientY - rect.top) * sy;
+    const col = Math.floor((x - this.offsetX) / this.cell);
+    const row = Math.floor((y - this.offsetY) / this.cell);
+    if (row < 0 || row >= this.map.height || col < 0 || col >= this.map.width) return null;
+    if (this._walls.has(this._key([row, col]))) return null;
+    return [row, col];
+  }
+
+  // Tree-traversal phase: Pac-man jumps between nodes following expanded_order
+  // (not the actual path). We do NOT restore food based on each node's food-state
+  // (that would make food "reappear" when expansion jumps to a shallower branch);
+  // instead we only DELETE food at the cell Pac-man currently stands on. This keeps
+  // food strictly decreasing: whichever cell is reached gets eaten for good.
+  setSearchNode(node, { animate = true, effect = true } = {}) {
     if (!node) return;
     this.setPacman(node.pos, node.action || this._dirOf(this.pacman, node.pos));
     this._prevPacman = node.pos.slice();
-    if (node.food) this.food = new Set(node.food.map((p) => this._key(p)));
-    if (node.power_pellets) this.pellets = new Set(node.power_pellets.map((p) => this._key(p)));
+    this._eatAt(node.pos, effect);
     if (animate) this._mouthPhase += 0.9;
   }
 
+  // Deletes food/pellet at cell `rc` (if any) and fires the eat effect.
+  _eatAt(rc, effect = true) {
+    const k = this._key(rc);
+    const ateFood = this.food.delete(k);
+    const atePellet = this.pellets.delete(k);
+    if (effect && this.onEat && (ateFood || atePellet)) {
+      const [x, y] = this._px(rc);
+      this.onEat(x + this.cell / 2, y + this.cell / 2, atePellet);
+    }
+  }
+
+  // Rebuilds state at a timeline point: eats all cells passed through so far
+  // (keeps stepping forward/backward monotonic), only the last node fires the effect.
   setSearchTimeline(nodes) {
     if (!nodes || nodes.length === 0) return;
+    for (let i = 0; i < nodes.length - 1; i++) this._eatAt(nodes[i].pos, false);
     this.setSearchNode(nodes.at(-1));
   }
 
@@ -103,9 +167,33 @@ export class PacmanRenderer {
     this._drawVisited();
     this._drawWalls();
     this._drawFood();
+    this._drawGoal();
     this._drawPath();
     this._drawGhosts();
     this._drawPacman();
+  }
+
+  // Target cell chosen by the user (path_to_cell exercise): blinking square outline
+  // + a cross in the middle, inky cyan to distinguish from the path (yellow) and visited cells.
+  _drawGoal() {
+    if (!this.goal) return;
+    const { ctx, cell } = this;
+    const [x, y] = this._px(this.goal);
+    const blink = this.reducedMotion ? 1 : 0.55 + 0.45 * Math.sin(Date.now() / 200);
+    ctx.save();
+    ctx.strokeStyle = `rgba(${VISITED_RGB}, ${blink})`;
+    ctx.lineWidth = Math.max(2, cell * 0.12);
+    ctx.strokeRect(x + 3, y + 3, cell - 6, cell - 6);
+    const cx = x + cell / 2;
+    const cy = y + cell / 2;
+    const r = cell * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(cx - r, cy);
+    ctx.lineTo(cx + r, cy);
+    ctx.moveTo(cx, cy - r);
+    ctx.lineTo(cx, cy + r);
+    ctx.stroke();
+    ctx.restore();
   }
 
   _px(rc) {
@@ -135,7 +223,7 @@ export class PacmanRenderer {
       ctx.arc(x + cell / 2, y + cell / 2, Math.max(2, cell * 0.09), 0, Math.PI * 2);
       ctx.fill();
     }
-    const blink = Math.floor(Date.now() / 350) % 2 === 0;
+    const blink = this.reducedMotion || Math.floor(Date.now() / 350) % 2 === 0;
     ctx.fillStyle = blink ? PELLET_ON : PELLET_OFF;
     for (const k of this.pellets) {
       const [r, c] = k.split(",").map(Number);
@@ -228,7 +316,7 @@ export class PacmanRenderer {
     }
   }
 
-  // Pha duyệt: Pac-man đứng trên node đang được chọn trong cây, không tô màu map.
+  // Traversal phase: Pac-man stands on the currently selected tree node, no map coloring.
   animateSearch(treeNodes, stepDelay, shouldStop, onStep, shouldPause) {
     return new Promise((resolve) => {
       this.visited = [];
@@ -260,7 +348,7 @@ export class PacmanRenderer {
     });
   }
 
-  // Animate Pac-man đi dọc path (mảng [r,c]).
+  // Animates Pac-man moving along the path (array of [r,c]).
   animatePath(pathCells, stepDelay, shouldStop, shouldPause) {
     return new Promise((resolve) => {
       let i = 0;
@@ -273,19 +361,14 @@ export class PacmanRenderer {
         if (i >= pathCells.length) return resolve();
         const cur = pathCells[i];
         if (i > 0) {
-          const prev = pathCells[i - 1];
-          this.pacDir = this._dirOf(prev, cur);
-          const k = this._key(cur);
-          const ateFood = this.food.delete(k);
-          const atePellet = this.pellets.delete(k);
-          if (this.onEat && (ateFood || atePellet)) {
-            const [x, y] = this._px(cur);
-            this.onEat(x + this.cell / 2, y + this.cell / 2, atePellet);
-          }
+          this.pacDir = this._dirOf(pathCells[i - 1], cur);
+          this._eatAt(cur);
         }
         this.pacman = cur.slice();
         this._prevPacman = cur.slice();
         this._mouthPhase += 0.9;
+        // Grow the route line as Pac-man advances (kept after finishing).
+        this.path = pathCells.slice(0, i + 1);
         this.draw();
         i++;
         setTimeout(tick, stepDelay);
