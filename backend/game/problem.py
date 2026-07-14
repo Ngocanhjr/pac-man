@@ -14,102 +14,120 @@ Hai biến thể bài toán tĩnh:
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple
+from typing import FrozenSet
 
-from .state import Direction, GameState, Position
-from .rules import move_pacman, pacman_legal_actions, STEP_COST
+from .operators import move_pacman, pacman_legal_actions, STEP_COST
+from .state import Direction, EatAllDotsState, Maze, PathState, Position
 
+EMPTY = frozenset()  # tập rỗng, dùng để so sánh với tập food còn lại
 
 class SearchProblem(ABC):
+    """Giao diện chung cho các bài toán tìm kiếm Pac-man tĩnh."""
+    
     @abstractmethod
-    def initial_state(self) -> GameState: ...
+    def initial_state(self) -> PathState | EatAllDotsState:
+        """Trả về trạng thái đầu."""
+        
+    @abstractmethod
+    def is_goal(self, state: PathState | EatAllDotsState) -> bool:
+        """Kiểm tra state có phải goal."""
+        
+    @abstractmethod
+    def actions(self, state: PathState | EatAllDotsState) -> list[Direction]:
+        """Trả về các action hợp lệ."""
 
     @abstractmethod
-    def is_goal(self, state: GameState) -> bool: ...
+    def result(self, state: PathState | EatAllDotsState, action: Direction) -> PathState | EatAllDotsState:
+        """Tạo state mới sau action."""
 
-    @abstractmethod
-    def actions(self, state: GameState) -> List[Direction]: ...
-
-    @abstractmethod
-    def result(self, state: GameState, action: Direction) -> GameState: ...
-
-    def step_cost(self, state: GameState, action: Direction, nxt: GameState) -> float:
-        return 1.0
-
-    def state_key(self, state: GameState):
-        """Khóa định danh state để bỏ vào tập đã thăm."""
-        return state.search_key()
+    def step_cost(self, _state, _action, _next) -> float:
+        """Mọi action có cost bằng 1."""
+        return STEP_COST
 
 
 class EatAllFoodProblem(SearchProblem):
-    """Mục tiêu: ăn hết toàn bộ food. Khóa state = (pacman, food)."""
+    """Mục tiêu: ăn hết toàn bộ food. State là FoodState(pacman, food)."""
 
-    def __init__(self, start: GameState):
-        self._start = start
+    def __init__(
+        self,
+        maze: Maze,
+        pacman_start: Position,
+        initial_food: FrozenSet[Position],
+    ):
+        self.maze = maze
+        self._start = EatAllDotsState(pacman=pacman_start, food=initial_food)
 
-    def initial_state(self) -> GameState:
+    def initial_state(self) -> EatAllDotsState:
         return self._start
 
-    def is_goal(self, state: GameState) -> bool:
-        return len(state.food) == 0
+    def is_goal(self, state: EatAllDotsState) -> bool:
+        return len(state.food) == EMPTY
 
-    def actions(self, state: GameState) -> List[Direction]:
-        return pacman_legal_actions(state)
+    def actions(self, state: EatAllDotsState) -> list[Direction]:
+        return pacman_legal_actions(self.maze, state.pacman)
 
-    def result(self, state: GameState, action: Direction) -> GameState:
-        return move_pacman(state, action)
-
-    def step_cost(self, state, action, nxt) -> float:
-        return float(STEP_COST)
+    def result(self, state: EatAllDotsState, action: Direction) -> EatAllDotsState:
+        pacman = move_pacman(self.maze, state.pacman, action)
+        food = state.food - {pacman}  # ăn food nếu có
+        return EatAllDotsState(pacman=pacman, food=food)
 
 
 class PathToPointProblem(SearchProblem):
-    """Mục tiêu: Pac-man đi tới ô `goal`. Khóa state = vị trí Pac-man."""
+    """Mục tiêu: Pac-man đi tới ô `goal`. State = vị trí Pac-man (PathState). """
 
-    def __init__(self, start: GameState, goal: Position):
-        self._start = start
-        self._goal = goal
+    def __init__(self, maze: Maze, pacman_start: Position, goal: Position):
+        self.maze = maze
+        self._start = PathState(pacman_start)
+        self.goal = goal
 
-    def initial_state(self) -> GameState:
+
+    def initial_state(self) -> PathState:
         return self._start
 
-    def is_goal(self, state: GameState) -> bool:
-        return state.pacman == self._goal
+    def is_goal(self, state: PathState) -> bool:
+        return state.pacman == self.goal
 
-    def actions(self, state: GameState) -> List[Direction]:
-        return pacman_legal_actions(state)
+    def actions(self, state: PathState) -> list[Direction]:
+        return pacman_legal_actions(self.maze, state.pacman)
 
-    def result(self, state: GameState, action: Direction) -> GameState:
-        return move_pacman(state, action)
+    def result(self, state: PathState, action: Direction) -> PathState:
+        pacman = move_pacman(self.maze, state.pacman, action)
+        return PathState(pacman=pacman)
 
-    def step_cost(self, state, action, nxt) -> float:
-        return 1.0
-
-    def state_key(self, state: GameState) -> Position:
-        return state.pacman
-
-    @property
-    def goal(self) -> Position:
-        return self._goal
+# def nearest_food(state: EatAllDotsState) -> Position | None:
+#     """Trả về ô food gần nhất theo Manhattan (tiện tạo PathToPointProblem)."""
+#     if not state.food:
+#         return None
+#     pr, pc = state.pacman
+#     return min(state.food, key=lambda f: abs(f[0] - pr) + abs(f[1] - pc))
 
 
-def nearest_food(state: GameState) -> Position | None:
-    """Trả về ô food gần nhất theo Manhattan (tiện tạo PathToPointProblem)."""
-    if not state.food:
+# def farthest_food(state: EatAllDotsState) -> Position | None:
+#     """Trả về ô food XA nhất theo Manhattan.
+
+#     Dùng cho bài minh họa "đi tới 1 ô đích": food xa nhất tạo đường đi dài, nhờ đó
+#     phân biệt rõ đặc tính các thuật toán (BFS/UCS/A* tối ưu, DFS/Greedy có thể dài hơn).
+#     Ngược lại food gần nhất trên các bản đồ này thường kề ngay Pac-man -> mọi thuật
+#     toán chỉ đi 1 bước, không so sánh được gì.
+#     """
+#     if not state.food:
+#         return None
+#     pr, pc = state.pacman
+#     return max(state.food, key=lambda f: abs(f[0] - pr) + abs(f[1] - pc))
+
+def nearest_food(food: FrozenSet[Position], pacman: Position) -> Position | None:
+    """Trả về food gần Pac-man nhất theo Manhattan."""
+    if not food:
         return None
-    pr, pc = state.pacman
-    return min(state.food, key=lambda f: abs(f[0] - pr) + abs(f[1] - pc))
+
+    row, col = pacman
+    return min(food, key=lambda pos: abs(pos[0] - row) + abs(pos[1] - col))
 
 
-def farthest_food(state: GameState) -> Position | None:
-    """Trả về ô food XA nhất theo Manhattan.
-
-    Dùng cho bài minh họa "đi tới 1 ô đích": food xa nhất tạo đường đi dài, nhờ đó
-    phân biệt rõ đặc tính các thuật toán (BFS/UCS/A* tối ưu, DFS/Greedy có thể dài hơn).
-    Ngược lại food gần nhất trên các bản đồ này thường kề ngay Pac-man -> mọi thuật
-    toán chỉ đi 1 bước, không so sánh được gì.
-    """
-    if not state.food:
+def farthest_food(food: FrozenSet[Position], pacman: Position) -> Position | None:
+    """Trả về food xa Pac-man nhất theo Manhattan."""
+    if not food:
         return None
-    pr, pc = state.pacman
-    return max(state.food, key=lambda f: abs(f[0] - pr) + abs(f[1] - pc))
+
+    row, col = pacman
+    return max(food, key=lambda pos: abs(pos[0] - row) + abs(pos[1] - col))

@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from ..game.layout import list_maps, load_layout
 from ..game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food
-from ..game.state import GameState
+from ..game.state import GameMap
 from ..search.heuristics import get_heuristic
 from ..search.registry import (
     SEARCH_ALGOS,
@@ -37,7 +37,7 @@ app.add_middleware(
 )
 
 
-def serialize_map(s: GameState) -> Dict:
+def serialize_map(s: GameMap) -> Dict:
     return {
         "width": s.width,
         "height": s.height,
@@ -49,12 +49,12 @@ def serialize_map(s: GameState) -> Dict:
     }
 
 
-def build_problem(start: GameState, kind: str):
+def build_problem(start: GameMap, kind: str):
     if kind == "path_to_farthest":
-        goal = farthest_food(start)
+        goal = farthest_food(start.food, start.pacman)
         if goal is None:
             raise HTTPException(400, "Bản đồ không có food cho bài toán path_to_farthest.")
-        return PathToPointProblem(start, goal)
+        return PathToPointProblem(start.maze, start.pacman, goal)
     return EatAllFoodProblem(start)
 
 
