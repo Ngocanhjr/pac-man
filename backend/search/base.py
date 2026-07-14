@@ -8,11 +8,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from ..game.state import Direction, Position
+from ..game.state import Direction, EatAllFoodState, PathState, Position
 from ..metrics.counters import SearchMetrics
 
 TREE_LIMIT = 250
-
 
 @dataclass
 class SearchResult:
@@ -44,10 +43,11 @@ class SearchResult:
 class Node:
     """Node trên cây tìm kiếm: lưu state, cha, action dẫn tới nó, và g(n)."""
 
-    state: object
-    parent: Optional["Node"] = None
-    action: Optional[Direction] = None
+    state: PathState | EatAllFoodState
+    parent: "Node | None" = None
+    action: Direction | None = None
     cost: float = 0.0  # g(n): chi phí tích lũy từ gốc
+    depth: int = 0
     nid: int = 0       # id chạy (để dựng cây tìm kiếm cho FE)
 
     def reconstruct(self):
@@ -91,10 +91,10 @@ class TreeRecorder:
             "action": node.action.value if node.action else None,
             "food_left": len(getattr(node.state, "food", ())),
             "food": [list(p) for p in sorted(getattr(node.state, "food", ()))],
-            "power_pellets": [list(p) for p in sorted(getattr(node.state, "power_pellets", ()))],
             "g": node.cost,
             "h": h_val,
             "f": node.cost + h_val,
+            "depth": node.depth,
             "created_order": len(self.nodes),
             "expanded_order": None,
         }
@@ -110,3 +110,19 @@ class TreeRecorder:
         if item and item["expanded_order"] is None:
             item["expanded_order"] = self._expanded
             self._expanded += 1
+
+
+def success_result(node: Node, metrics: SearchMetrics, visited_order, tree: TreeRecorder) -> SearchResult:
+    actions, path = node.reconstruct()
+    metrics.path_length = len(actions)
+    metrics.cost = node.cost
+    metrics.goal_depth = node.depth
+    metrics.found = True
+    metrics.stop()
+    return SearchResult(True, actions, path, visited_order, tree.nodes, metrics, tree.truncated, tree.limit)
+
+
+def failure_result(metrics: SearchMetrics, visited_order, tree: TreeRecorder) -> SearchResult:
+    metrics.found = False
+    metrics.stop()
+    return SearchResult(False, [], [], visited_order, tree.nodes, metrics, tree.truncated, tree.limit)

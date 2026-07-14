@@ -15,8 +15,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..game.layout import list_maps, load_layout
-from ..game.problem import EatAllFoodProblem, PathToPointProblem, farthest_cell
-from ..game.state import GameState
+from ..game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food
+from ..game.state import GameMap
 from ..search.heuristics import get_heuristic
 from ..search.registry import (
     SEARCH_ALGOS,
@@ -37,40 +37,54 @@ app.add_middleware(
 )
 
 
-def serialize_map(s: GameState) -> Dict:
+def serialize_map(game_map: GameMap) -> Dict:
     return {
-        "width": s.width,
-        "height": s.height,
-        "walls": [list(p) for p in sorted(s.walls)],
-        "food": [list(p) for p in sorted(s.food)],
-        "power_pellets": [list(p) for p in sorted(s.power_pellets)],
-        "pacman_start": list(s.pacman),
-        "ghosts_start": [list(g.pos) for g in s.ghosts],
+        "width": game_map.maze.width,
+        "height": game_map.maze.height,
+        "walls": [list(pos) for pos in sorted(game_map.maze.walls)],
+        "food": [list(pos) for pos in sorted(game_map.initial_food)],
+        "pacman_start": list(game_map.pacman_start),
+        "ghosts_start": [],
     }
 
 
-def build_problem(start: GameState, kind: str, goal=None):
-    if kind == "path_to_cell":
-        if goal is not None:
-            if (
-                not isinstance(goal, (list, tuple))
-                or len(goal) != 2
-                or not all(isinstance(v, int) for v in goal)
-            ):
-                raise HTTPException(400, "goal phải có dạng [row, col].")
-            r, c = int(goal[0]), int(goal[1])
-            if not (0 <= r < start.height and 0 <= c < start.width):
-                raise HTTPException(400, f"Ô đích ({r},{c}) nằm ngoài bản đồ.")
-            if (r, c) in start.walls:
-                raise HTTPException(400, f"Ô đích ({r},{c}) là tường, không thể tới.")
-            return PathToPointProblem(start, (r, c))
-        # Chưa chọn ô -> mặc định ô trống XA nhất (không nhất thiết có food).
-        auto_goal = farthest_cell(start)
-        if auto_goal is None:
-            raise HTTPException(400, "Bản đồ không có ô trống cho bài toán path_to_cell.")
-        return PathToPointProblem(start, auto_goal)
-    return EatAllFoodProblem(start)
+def build_problem(
+    game_map: GameMap,
+    kind: str,
+    goal: list[int] | None = None,
+) -> EatAllFoodProblem | PathToPointProblem:
+    if kind == "eat_all":
+        return EatAllFoodProblem(
+            game_map.maze,
+            game_map.pacman_start,
+            game_map.initial_food,
+        )
 
+    if kind != "path_to_cell":
+        raise HTTPException(400, f"Bài toán '{kind}' không hợp lệ.")
+
+    if goal is None:
+        target = farthest_food(
+            game_map.initial_food,
+            game_map.pacman_start,
+        )
+        if target is None:
+            raise HTTPException(400, "Bản đồ không có food để chọn goal.")
+    else:
+        if len(goal) != 2:
+            raise HTTPException(400, "Goal phải có dạng [row, col].")
+        target = (goal[0], goal[1])
+
+    if not game_map.maze.in_bounds(target):
+        raise HTTPException(400, "Goal nằm ngoài bản đồ.")
+    if game_map.maze.is_wall(target):
+        raise HTTPException(400, "Goal không được nằm trên tường.")
+
+    return PathToPointProblem(
+        game_map.maze,
+        game_map.pacman_start,
+        target,
+    )
 
 # Bài "ăn hết food" có không gian trạng thái ~2^(số food) -> chỉ khả thi khi
 # food ít. Chặn sớm để tránh treo server trên bản đồ lớn (medium/classic).
@@ -80,7 +94,7 @@ EAT_ALL_MAX_FOOD = 25
 #   - các heuristic dựa trên food chỉ có tác dụng cho eat_all.
 # Nếu người dùng chọn heuristic trả 0 cho bài toán đang chạy, tự thay bằng
 # heuristic mặc định hợp lý để A* thật sự dùng thông tin (không lặng lẽ = UCS).
-_ZERO_FOR_EAT_ALL = {"manhattan", "null"}
+_ZERO_FOR_EAT_ALL = {"manhattan"}
 _ZERO_FOR_PATH = {"nearest_food", "farthest_food", "food_count"}
 
 
@@ -103,13 +117,12 @@ def run_static(map_name: str, algo: str, heuristic_name: str, problem_kind: str,
     # Cây luôn bật cho static, nhưng search layer tự cap để demo không làm nặng UI.
     record_tree = True
 
-    if problem_kind == "eat_all" and start.num_food > EAT_ALL_MAX_FOOD:
+    food_count = len(start.initial_food)
+
+    if problem_kind == "eat_all" and food_count > EAT_ALL_MAX_FOOD:
         raise HTTPException(
             400,
-            f"Bản đồ '{map_name}' có {start.num_food} food -> bài 'ăn hết food' "
-            f"có không gian trạng thái ~2^{start.num_food}, không thể giải kịp. "
-            f"Hãy chọn bản đồ nhỏ (small) cho 'ăn hết food', hoặc dùng bài "
-            f"'đi tới food xa nhất' cho bản đồ lớn.",
+            f"Bản đồ '{map_name}' có {food_count} food; hãy chọn bản đồ nhỏ hơn.",
         )
 
     problem = build_problem(start, problem_kind, goal)
