@@ -17,25 +17,25 @@ from abc import ABC, abstractmethod
 from typing import FrozenSet
 
 from .operators import move_pacman, pacman_legal_actions, STEP_COST
-from .state import Direction, EatAllFoodState, Maze, PathState, Position
+from .state import Direction, EatAllDotState, Maze, PathState, Position
 
 class SearchProblem(ABC):
     """Giao diện chung cho các bài toán tìm kiếm Pac-man tĩnh."""
     
     @abstractmethod
-    def initial_state(self) -> PathState | EatAllFoodState:
+    def initial_state(self) -> PathState | EatAllDotState:
         """Trả về trạng thái đầu."""
         
     @abstractmethod
-    def is_goal(self, state: PathState | EatAllFoodState) -> bool:
+    def is_goal(self, state: PathState | EatAllDotState) -> bool:
         """Kiểm tra state có phải goal."""
         
     @abstractmethod
-    def actions(self, state: PathState | EatAllFoodState) -> list[Direction]:
+    def actions(self, state: PathState | EatAllDotState) -> list[Direction]:
         """Trả về các action hợp lệ."""
 
     @abstractmethod
-    def result(self, state: PathState | EatAllFoodState, action: Direction) -> PathState | EatAllFoodState:
+    def result(self, state: PathState | EatAllDotState, action: Direction) -> PathState | EatAllDotState:
         """Tạo state mới sau action."""
 
     def step_cost(self, _state, _action, _next) -> float:
@@ -43,7 +43,7 @@ class SearchProblem(ABC):
         return STEP_COST
 
 
-class EatAllFoodProblem(SearchProblem):
+class EatAllDotProblem(SearchProblem):
     """Mục tiêu: ăn hết toàn bộ food. State là FoodState(pacman, food)."""
 
     def __init__(
@@ -53,21 +53,21 @@ class EatAllFoodProblem(SearchProblem):
         initial_food: FrozenSet[Position],
     ):
         self.maze = maze
-        self._start = EatAllFoodState(pacman=pacman_start, food=initial_food)
+        self._start = EatAllDotState(pacman=pacman_start, food=initial_food)
 
-    def initial_state(self) -> EatAllFoodState:
+    def initial_state(self) -> EatAllDotState:
         return self._start
 
-    def is_goal(self, state: EatAllFoodState) -> bool:
+    def is_goal(self, state: EatAllDotState) -> bool:
         return not state.food  # hết food -> win
 
-    def actions(self, state: EatAllFoodState) -> list[Direction]:
+    def actions(self, state: EatAllDotState) -> list[Direction]:
         return pacman_legal_actions(self.maze, state.pacman)
 
-    def result(self, state: EatAllFoodState, action: Direction) -> EatAllFoodState:
+    def result(self, state: EatAllDotState, action: Direction) -> EatAllDotState:
         pacman = move_pacman(self.maze, state.pacman, action)
         food = state.food - {pacman}  # ăn food nếu có
-        return EatAllFoodState(pacman=pacman, food=food)
+        return EatAllDotState(pacman=pacman, food=food)
 
 
 class PathToPointProblem(SearchProblem):

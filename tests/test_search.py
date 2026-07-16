@@ -1,5 +1,5 @@
 from backend.game.layout import parse_layout
-from backend.game.problem import EatAllFoodProblem, PathToPointProblem
+from backend.game.problem import EatAllDotProblem, PathToPointProblem
 from backend.search.heuristics import farthest_food_dist, goal_manhattan, null_heuristic
 from backend.search.informed import astar, greedy
 from backend.search.uninformed import bfs, dfs, ucs
@@ -22,7 +22,7 @@ SMALL = """
 
 def _eat_all_problem(text=SMALL):
     game_map = parse_layout(text)
-    return EatAllFoodProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
+    return EatAllDotProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
 
 
 def _path_problem(text=CORRIDOR, goal=(1, 5)):

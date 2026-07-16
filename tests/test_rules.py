@@ -2,8 +2,8 @@ import pytest
 
 from backend.game.layout import parse_layout
 from backend.game.operators import move_pacman, pacman_legal_actions
-from backend.game.problem import EatAllFoodProblem, PathToPointProblem
-from backend.game.state import Direction, EatAllFoodState, PathState
+from backend.game.problem import EatAllDotProblem, PathToPointProblem
+from backend.game.state import Direction, EatAllDotState, PathState
 
 
 TINY = """
@@ -48,8 +48,8 @@ def test_path_problem_result_changes_only_pacman_position():
 
 def test_eat_all_result_removes_food_at_destination():
     game_map = _game_map()
-    problem = EatAllFoodProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
+    problem = EatAllDotProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
 
     state = problem.result(problem.initial_state(), Direction.RIGHT)
 
-    assert state == EatAllFoodState((1, 2), game_map.initial_food - {(1, 2)})
+    assert state == EatAllDotState((1, 2), game_map.initial_food - {(1, 2)})

@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from ..game.state import Direction, EatAllFoodState, PathState, Position
+from ..game.state import Direction, EatAllDotState, PathState, Position
 from ..metrics.counters import SearchMetrics
 
 TREE_LIMIT = 250
@@ -43,7 +43,7 @@ class SearchResult:
 class Node:
     """Node trên cây tìm kiếm: lưu state, cha, action dẫn tới nó, và g(n)."""
 
-    state: PathState | EatAllFoodState
+    state: PathState | EatAllDotState
     parent: "Node | None" = None
     action: Direction | None = None
     cost: float = 0.0  # g(n): chi phí tích lũy từ gốc

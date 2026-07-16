@@ -53,7 +53,7 @@ class PathState:
     pacman: Position  # vị trí hiện tại của Pacman
 
 @dataclass(frozen=True)
-class EatAllFoodState:
+class EatAllDotState:
     """State Eat-all-dots: vị trí Pac-man và các vị trí thức ăn còn lại."""
     pacman: Position
     food: FrozenSet[Position]  # tập hợp các vị trí còn lại của thức ăn    

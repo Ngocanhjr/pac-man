@@ -22,7 +22,7 @@ except (AttributeError, ValueError):
     pass
 
 from backend.game.layout import list_maps, load_layout  # noqa: E402
-from backend.game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food  # noqa: E402
+from backend.game.problem import EatAllDotProblem, PathToPointProblem, farthest_food  # noqa: E402
 from backend.search.heuristics import get_heuristic  # noqa: E402
 from backend.search.registry import SEARCH_ALGOS, SEARCH_INFO, is_informed  # noqa: E402
 
@@ -39,7 +39,7 @@ def build_problem(start, kind):
     if kind == "path_to_farthest":
         goal = farthest_food(start)
         return PathToPointProblem(start, goal) if goal else None
-    return EatAllFoodProblem(start)
+    return EatAllDotProblem(start)
 
 
 def run_one(map_name, problem_kind, algo):
