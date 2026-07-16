@@ -80,12 +80,8 @@ export function CompareTable({ rows, algoInfo }) {
     return point?.order ?? null;
   };
   const sameSelection = (left, right) => left === right;
-  const activeSelection = hovered ?? pinned;
-  const activePoints = activeSelection == null ? [] : series.flatMap((item, index) => {
-    const point = item.points.find((candidate) => candidate.order === activeSelection);
-    return point ? [{ ...point, name: item.name, style: ALGORITHM_STYLES[index % ALGORITHM_STYLES.length] }] : [];
-  });
-  const activePinned = sameSelection(activeSelection, pinned);
+  const activeSelections = [pinned, hovered]
+    .filter((order, index, selections) => order != null && selections.indexOf(order) === index);
 
   return (
     <section className="lab-panel comparison-line-panel" aria-labelledby="comparison-line-title">
@@ -182,32 +178,39 @@ export function CompareTable({ rows, algoInfo }) {
               </g>
             );
           })}
-          {activePoints.length > 0 && (
-            <g className="comparison-line-selection" opacity={activePinned ? 1 : 0.5} pointerEvents="none">
-              <line
-                className="comparison-line-guide"
-                x1={getX(activeSelection)}
-                y1={PAD.top}
-                x2={getX(activeSelection)}
-                y2={PAD.top + plotHeight + 7}
-              />
-              {activePoints.map((point, index) => {
-                const overlaps = activePoints.slice(0, index)
-                  .filter((other) => Math.abs(getY(other.value) - getY(point.value)) < 14).length;
-                return (
-                  <g key={point.name}>
-                    <circle cx={getX(point.order)} cy={getY(point.value)} r="7" fill={point.style.color} />
-                    <text className="comparison-line-value" x={getX(point.order)} y={getY(point.value) - 12 - overlaps * 14} textAnchor="middle" fill={point.style.color}>
-                      {formatValue(point.value)}
-                    </text>
-                  </g>
-                );
-              })}
-              <text className="comparison-line-node" x={getX(activeSelection)} y={PAD.top + plotHeight + 48} textAnchor="middle">
-                Node #{activeSelection + 1}
-              </text>
-            </g>
-          )}
+          {activeSelections.map((selection) => {
+            const activePoints = series.flatMap((item, index) => {
+              const point = item.points.find((candidate) => candidate.order === selection);
+              return point ? [{ ...point, name: item.name, style: ALGORITHM_STYLES[index % ALGORITHM_STYLES.length] }] : [];
+            });
+            if (!activePoints.length) return null;
+            return (
+              <g key={selection} className="comparison-line-selection" opacity={sameSelection(selection, pinned) ? 1 : 0.5} pointerEvents="none">
+                <line
+                  className="comparison-line-guide"
+                  x1={getX(selection)}
+                  y1={PAD.top}
+                  x2={getX(selection)}
+                  y2={PAD.top + plotHeight + 7}
+                />
+                {activePoints.map((point, index) => {
+                  const overlaps = activePoints.slice(0, index)
+                    .filter((other) => Math.abs(getY(other.value) - getY(point.value)) < 14).length;
+                  return (
+                    <g key={point.name}>
+                      <circle cx={getX(point.order)} cy={getY(point.value)} r="7" fill={point.style.color} />
+                      <text className="comparison-line-value" x={getX(point.order)} y={getY(point.value) - 12 - overlaps * 14} textAnchor="middle" fill={point.style.color}>
+                        {formatValue(point.value)}
+                      </text>
+                    </g>
+                  );
+                })}
+                <text className="comparison-line-node" x={getX(selection)} y={PAD.top + plotHeight + 48} textAnchor="middle">
+                  Node #{selection + 1}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
     </section>
