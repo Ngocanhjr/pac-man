@@ -15,7 +15,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..game.layout import list_maps, load_layout
-from ..game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food
+from ..game.problem import EatAllDotProblem, PathToPointProblem, farthest_food
 from ..game.state import GameMap
 from ..search.heuristics import get_heuristic
 from ..search.registry import (
@@ -52,9 +52,9 @@ def build_problem(
     game_map: GameMap,
     kind: str,
     goal: list[int] | None = None,
-) -> EatAllFoodProblem | PathToPointProblem:
+) -> EatAllDotProblem | PathToPointProblem:
     if kind == "eat_all":
-        return EatAllFoodProblem(
+        return EatAllDotProblem(
             game_map.maze,
             game_map.pacman_start,
             game_map.initial_food,

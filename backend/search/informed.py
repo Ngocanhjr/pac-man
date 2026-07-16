@@ -10,7 +10,7 @@ import heapq
 
 from ..game.problem import SearchProblem
 from ..metrics.counters import SearchMetrics
-from .base import Node, TreeRecorder, failure_result, success_result
+from .base import Node, TreeRecorder, failure_result, success_result, SearchResult
 from .heuristics import Heuristic, null_heuristic
 
 

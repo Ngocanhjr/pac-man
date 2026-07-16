@@ -11,14 +11,15 @@ from __future__ import annotations
 
 from typing import Callable
 
-from ..game.problem import EatAllFoodProblem, PathToPointProblem, SearchProblem
-from ..game.state import EatAllFoodState, PathState, Position
+from ..game.problem import EatAllDotProblem, PathToPointProblem, SearchProblem
+from ..game.state import EatAllDotState, PathState, Position
 
-SearchState = EatAllFoodState | PathState
+SearchState = EatAllDotState | PathState
 
 Heuristic = Callable[[SearchState, SearchProblem], float]
 
 
+#---------------------------Heuristic for PathToPointProblem---------------------------#
 def manhattan(a: Position, b: Position) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
@@ -37,7 +38,7 @@ def goal_manhattan(state: SearchState, problem: SearchProblem) -> float:
         return float(manhattan(state.pacman, problem.goal))
     return 0.0
 
-
+#---------------------------Heuristic for EatAllDotsProblem---------------------------#
 def nearest_food_dist(state: SearchState, problem: SearchProblem) -> float:
     """Khoảng cách Manhattan tới food GẦN nhất.
 
@@ -46,7 +47,7 @@ def nearest_food_dist(state: SearchState, problem: SearchProblem) -> float:
     thấp hơn nhiều so với thực tế, nên A* với nó vẫn tối ưu nhưng expand nhiều;
     phù hợp làm heuristic của Greedy hoặc A* "nhanh".
     """
-    if not isinstance(state, EatAllFoodState) or not state.food:
+    if not isinstance(state, EatAllDotState) or not state.food:
         return 0.0
     return float(min(manhattan(state.pacman, food) for food in state.food))
 
@@ -57,7 +58,7 @@ def farthest_food_dist(state: SearchState, problem: SearchProblem) -> float:
     ADMISSIBLE cho bài toán ăn hết food: muốn ăn hết thì ít nhất phải đi tới được
     miếng xa nhất, nên chi phí thực >= khoảng cách tới miếng xa nhất.
     """
-    if not isinstance(state, EatAllFoodState) or not state.food:
+    if not isinstance(state, EatAllDotState) or not state.food:
         return 0.0
     
     return float(max(manhattan(state.pacman, f) for f in state.food))
@@ -65,7 +66,7 @@ def farthest_food_dist(state: SearchState, problem: SearchProblem) -> float:
 
 def food_count(state: SearchState, problem: SearchProblem) -> float:
     """Số food còn lại. Admissible (mỗi food cần >=1 bước để ăn)."""
-    if not isinstance(state, EatAllFoodState):
+    if not isinstance(state, EatAllDotState):
         return 0.0
     return float(len(state.food))
 

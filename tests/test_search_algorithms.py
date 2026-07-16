@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from backend.game.layout import load_layout
-from backend.game.problem import EatAllFoodProblem, PathToPointProblem, farthest_food
+from backend.game.problem import EatAllDotProblem, PathToPointProblem, farthest_food
 from backend.search.heuristics import farthest_food_dist, goal_manhattan
 from backend.search.informed import astar, greedy
 from backend.search.uninformed import bfs, dfs, ucs
@@ -9,7 +9,7 @@ from backend.search.uninformed import bfs, dfs, ucs
 
 def _eat_all_problem(name):
     game_map = load_layout(name)
-    return EatAllFoodProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
+    return EatAllDotProblem(game_map.maze, game_map.pacman_start, game_map.initial_food)
 
 
 def _path_problem(name):
@@ -20,7 +20,7 @@ def _path_problem(name):
 
 def _run(problem, algorithm):
     if algorithm in {"greedy", "astar"}:
-        heuristic = farthest_food_dist if isinstance(problem, EatAllFoodProblem) else goal_manhattan
+        heuristic = farthest_food_dist if isinstance(problem, EatAllDotProblem) else goal_manhattan
         return {"greedy": greedy, "astar": astar}[algorithm](problem, heuristic, record_tree=True)
     return {"bfs": bfs, "dfs": dfs, "ucs": ucs}[algorithm](problem, record_tree=True)
 
