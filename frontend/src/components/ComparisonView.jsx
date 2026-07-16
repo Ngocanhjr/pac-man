@@ -58,7 +58,7 @@ export function ComparisonView({ rows, algoInfo }) {
   );
 }
 
-export function ComparisonTrees({ rows, algoInfo, problem, treeStep }) {
+export function ComparisonTrees({ rows, algoInfo, problem, treeStep, children }) {
   const available = (rows || []).filter((row) => !row.error && row.tree?.length);
   const [activePane, setActivePane] = useState(0);
   const selectedRows = available;
@@ -81,6 +81,8 @@ export function ComparisonTrees({ rows, algoInfo, problem, treeStep }) {
           <p>Same time step; each tree keeps its own pan and zoom.</p>
         </div>
       </div>
+
+      {children}
 
       {selectedRows.length > 1 && (
         <div className="segmented tree-pane-switch" role="group" aria-label="Active tree">

@@ -6,7 +6,6 @@ import { CompareTable } from "./components/CompareTable";
 import { ComparisonTrees, ComparisonView } from "./components/ComparisonView";
 import { ControlDeck } from "./components/ControlDeck";
 import { CRTScreen } from "./components/CRTScreen";
-import { FghChart } from "./components/FghChart";
 import { ProblemModelPanel } from "./components/ProblemModelPanel";
 import { SearchTreePanel } from "./components/SearchTreePanel";
 import { StatsPanel } from "./components/StatsPanel";
@@ -80,6 +79,7 @@ export default function App() {
   useEffect(() => applyTheme(theme), [theme]);
 
   useEffect(() => {
+    if (tab !== "play") return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const renderer = new PacmanRenderer(canvas);
@@ -101,8 +101,9 @@ export default function App() {
     return () => {
       cancelAnimationFrame(frame);
       motionQuery?.removeEventListener?.("change", syncMotion);
+      rendererRef.current = null;
     };
-  }, []);
+  }, [tab]);
 
   useEffect(() => {
     const timer = setTimeout(() => setPoweron(false), 700);
@@ -110,6 +111,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (tab !== "play") return;
     const renderer = rendererRef.current;
     if (!rendererReady || !renderer || meta.loading) return;
     const controller = new AbortController();
@@ -117,8 +119,9 @@ export default function App() {
       try {
         const map = await Api.getMap(cfg.map, { signal: controller.signal });
         renderer.setMap(map);
-        renderer.clearGoal();
-        setGoalCursor(null);
+        renderer.setProblem(cfg.problem);
+        if (cfg.problem === "path_to_cell" && cfg.goal) renderer.setGoal(cfg.goal);
+        else renderer.clearGoal();
         effects.clear();
         runner.reset();
         setMapError(null);
@@ -129,7 +132,7 @@ export default function App() {
     return () => controller.abort();
     // runner changes on every state update; map loading only follows these values.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cfg.map, meta.loading, rendererReady]);
+  }, [cfg.map, meta.loading, rendererReady, tab]);
 
   useEffect(() => {
     audio.setEnabled(soundOn);
@@ -138,17 +141,17 @@ export default function App() {
   useEffect(() => {
     const renderer = rendererRef.current;
     if (!renderer) return;
+    renderer.setProblem(cfg.problem);
     if (cfg.problem !== "path_to_cell") {
       renderer.clearGoal();
     } else if (cfg.goal) {
       renderer.setGoal(cfg.goal);
     }
-  }, [cfg.problem, cfg.goal]);
+  }, [cfg.problem, cfg.goal, tab]);
 
   const handleRun = () => tab === "compare" ? runner.runCompareTree(cfg) : runner.runStatic(cfg);
   const handleStep = () => tab === "compare" ? runner.stepCompareTree(cfg, 1) : runner.stepStatic(cfg, 1);
   const handleStepBack = () => tab === "compare" ? runner.stepCompareTree(cfg, -1) : runner.stepStatic(cfg, -1);
-  const handleCompare = () => runner.compare(cfg);
 
   const commitGoal = (cell) => {
     if (!cell) return;
@@ -221,7 +224,6 @@ export default function App() {
     onStep: handleStep,
     onStepBack: handleStepBack,
     onReset: runner.reset,
-    onCompare: handleCompare,
     onProblemChange: handleProblemChange,
   };
 
@@ -312,13 +314,13 @@ export default function App() {
                 algoInfo={meta.algoInfo}
                 problem={cfg.problem}
                 treeStep={runner.compareTreeStep}
-              />
+              >
+                <ControlDeck {...deckProps} tab="compare" section="compare-playback" progress={runner.compareProgress} />
+              </ComparisonTrees>
               <ComparisonView rows={runner.compareRows} algoInfo={meta.algoInfo} />
               <CompareTable rows={runner.compareRows} algoInfo={meta.algoInfo} />
               <CompareCharts rows={runner.compareRows} algoInfo={meta.algoInfo} />
-              <ControlDeck {...deckProps} tab="compare" section="compare-playback" progress={runner.compareProgress} />
 
-              <FghChart rows={runner.compareRows} algoInfo={meta.algoInfo} />
             </>
           ) : (
             <section className="lab-panel empty-compare">
