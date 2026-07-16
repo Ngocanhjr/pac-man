@@ -37,6 +37,30 @@ test("search timeline eats food at each visited cell, monotonically", () => {
   assert.deepEqual([...renderer.food].sort(), ["1,0", "9,9"]);
 });
 
+test("pathfinding hides food and never consumes it", () => {
+  let drewFood = false;
+  const renderer = Object.assign(Object.create(PacmanRenderer.prototype), {
+    problem: "path_to_cell",
+    food: new Set(["0,1"]),
+    map: {},
+    canvas: { width: 10, height: 10 },
+    ctx: { clearRect() {} },
+    _drawVisited() {},
+    _drawWalls() {},
+    _drawFood() { drewFood = true; },
+    _drawGoal() {},
+    _drawPath() {},
+    _drawGhosts() {},
+    _drawPacman() {},
+  });
+
+  renderer._eatAt([0, 1]);
+  renderer.draw();
+
+  assert.deepEqual([...renderer.food], ["0,1"]);
+  assert.equal(drewFood, false);
+});
+
 test("keyboard goal cursor moves only to an adjacent walkable cell", () => {
   const renderer = Object.assign(Object.create(PacmanRenderer.prototype), {
     map: { width: 4, height: 3 },

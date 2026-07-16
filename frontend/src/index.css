@@ -602,14 +602,14 @@ button:disabled, select:disabled, input:disabled { cursor: not-allowed; opacity:
 .insight-strip small { color: var(--text-muted); }
 
 .model-details { padding: 0; }
-.model-details summary, .fgh-details summary {
+.model-details summary {
   min-height: 52px;
   padding: 14px 16px;
   cursor: pointer;
   color: var(--color-inky);
   font-weight: 750;
 }
-.model-body, .fgh-body { border-top: 1px solid var(--border); padding: 16px; }
+.model-body { border-top: 1px solid var(--border); padding: 16px; }
 .model-body dl { display: grid; gap: 1px; margin: 0 0 14px; background: var(--border); }
 .model-body dl > div { display: grid; grid-template-columns: minmax(130px, 0.35fr) 1fr; gap: 16px; background: var(--surface); padding: 9px 10px; }
 .model-body dt { color: var(--text-muted); font-weight: 700; }
@@ -642,7 +642,7 @@ button:disabled, select:disabled, input:disabled { cursor: not-allowed; opacity:
 .comparison-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
 .bar-chart h3 { margin: 0; color: var(--color-inky); font-size: 17px; }
 .bar-chart > p { margin: 4px 0 10px; color: var(--text-muted); }
-.bar-chart svg, .fgh-chart { display: block; width: 100%; height: auto; overflow: visible; }
+.bar-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
 .chart-label, .chart-value { fill: var(--color-amber); font-family: var(--font-term); font-size: 12px; }
 
 .comparison-trees { container-type: inline-size; display: grid; gap: 12px; }
@@ -654,10 +654,7 @@ button:disabled, select:disabled, input:disabled { cursor: not-allowed; opacity:
 .tree-preview h3 { margin: 0; font-size: 18px; }
 .tree-preview .compact-heading p { margin: 4px 0 0; color: var(--text-muted); font-family: var(--font-term); font-size: 12px; }
 
-.fgh-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
-.fgh-toolbar p { margin: 0; color: var(--text-muted); }
 .metric-tabs button { min-width: 44px; }
-.chart-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-family: var(--font-term); font-size: 12px; }
 
 .empty-compare { min-height: 220px; display: grid; place-content: center; text-align: center; }
 .empty-compare p { max-width: 62ch; margin: 8px auto 0; color: var(--text-muted); }

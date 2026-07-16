@@ -18,7 +18,6 @@ const COMPARE_GROUPS = {
 };
 
 const HEURISTIC_LABEL = {
-  null: "None",
   manhattan: "Manhattan distance",
   nearest_food: "Nearest food",
   farthest_food: "Farthest food",
@@ -105,7 +104,6 @@ export function ControlDeck({
   onStep,
   onStepBack,
   onReset,
-  onCompare,
   onProblemChange,
 }) {
   const set = (patch, resetCached = false) => {
@@ -114,6 +112,10 @@ export function ControlDeck({
   };
   const groups = { uninformed: [], informed: [] };
   algorithms.forEach((algorithm) => groups[algorithm.group]?.push(algorithm));
+  const visibleHeuristics = heuristics.filter((heuristic) => heuristic !== "null");
+  const heuristicDisabled = (heuristic) => (
+    cfg.problem === "eat_all" ? heuristic === "manhattan" : heuristic !== "manhattan"
+  );
 
   if (section === "run" || section === "compare-playback") {
     return (
@@ -177,8 +179,24 @@ export function ControlDeck({
           {cfg.problem === "eat_all" && compareUsesHeuristic && (
             <Field label="Heuristic">
               <select value={cfg.heuristic} disabled={busy} onChange={(event) => set({ heuristic: event.target.value }, true)}>
-                {heuristics.map((heuristic) => <option key={heuristic} value={heuristic}>{HEURISTIC_LABEL[heuristic] || heuristic}</option>)}
+                {visibleHeuristics.map((heuristic) => (
+                  <option key={heuristic} value={heuristic} disabled={heuristicDisabled(heuristic)}>
+                    {HEURISTIC_LABEL[heuristic] || heuristic}
+                  </option>
+                ))}
               </select>
+            </Field>
+          )}
+          <div className="field">
+            <span id="compare-run-mode-label">Run mode</span>
+            <div className="segmented" role="group" aria-labelledby="compare-run-mode-label">
+              <button type="button" aria-pressed={cfg.runMode !== "step"} disabled={busy} onClick={() => cfg.runMode === "step" && set({ runMode: "auto" }, true)}>Auto</button>
+              <button type="button" aria-pressed={cfg.runMode === "step"} disabled={busy} onClick={() => cfg.runMode !== "step" && set({ runMode: "step" }, true)}>Step</button>
+            </div>
+          </div>
+          {cfg.runMode !== "step" && (
+            <Field label={`Speed: ${cfg.speed} steps/sec`}>
+              <input type="range" min="1" max="60" value={cfg.speed} disabled={busy} onChange={(event) => set({ speed: Number(event.target.value) })} />
             </Field>
           )}
         </div>
@@ -230,8 +248,8 @@ export function ControlDeck({
           <div className="compare-submit-row">
             <button
               className="button primary compare-submit"
-              disabled={busy || !validSelection}
-              onClick={onCompare}
+              disabled={busy || !validSelection || (cfg.runMode === "step" && !canStepNext)}
+              onClick={cfg.runMode === "step" ? onStep : onRun}
             >
               {busy
                 ? "Comparing"
@@ -288,7 +306,15 @@ export function ControlDeck({
         {usesHeuristic && (
           <Field label="Heuristic">
             <select value={cfg.heuristic} disabled={configLocked} onChange={(event) => set({ heuristic: event.target.value }, true)}>
-              {heuristics.map((heuristic) => <option key={heuristic} value={heuristic}>{HEURISTIC_LABEL[heuristic] || heuristic}</option>)}
+              {visibleHeuristics.map((heuristic) => (
+                <option
+                  key={heuristic}
+                  value={heuristic}
+                  disabled={heuristicDisabled(heuristic)}
+                >
+                  {HEURISTIC_LABEL[heuristic] || heuristic}
+                </option>
+              ))}
             </select>
           </Field>
         )}

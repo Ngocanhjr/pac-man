@@ -300,12 +300,11 @@ export function useRunner(rendererRef) {
       }
 
       // Phase 2 (single step): go straight to the goal. Draw the full route from
-      // the start to the target and move Pac-man there at once, eating every
-      // food along the way.
+      // the start to the target and move Pac-man there at once.
       r.visited = [];
       r.path = path.slice();
       for (let i = 1; i < path.length; i++) {
-        r.food.delete(r._key(path[i]));
+        r._eatAt(path[i], false);
       }
       const goal = path.at(-1);
       const dir = path.length > 1 ? r._dirOf(path.at(-2), goal) : "RIGHT";
@@ -389,49 +388,10 @@ export function useRunner(rendererRef) {
         return;
       }
       renderStaticAt(next);
-      if (dir > 0 && next > expandedTreeNodes(solve).length) audio.eat();
+      if (cfg.problem === "eat_all" && dir > 0 && next > expandedTreeNodes(solve).length) audio.eat();
     },
     [rendererRef, renderStaticAt, beginOperation, finishOperation, isCurrentOperation]
   );
-
-  const compare = useCallback(async (cfg) => {
-    const algos = cfg.compareAlgos || [];
-    if (algos.length < 2) {
-      setStatus("Select at least 2 algorithms to compare");
-      setPhase("error");
-      return;
-    }
-    const operation = beginOperation();
-    setBusy(true);
-    setPhase("solving");
-    setStatus(`Comparing ${algos.length} algorithms`);
-    try {
-      const result = await Api.compare({
-        map: cfg.map,
-        algorithms: algos,
-        heuristic: cfg.heuristic,
-        problem: cfg.problem,
-        goal: cfg.goal || null,
-      }, { signal: operation.signal });
-      if (!isCurrentOperation(operation.id)) return;
-      setCompareRows(result.results);
-      lastCompareKeyRef.current = compareKey(cfg);
-      compareTotalRef.current = compareTotal(result.results);
-      compareStepRef.current = compareTotalRef.current;
-      setCompareStepState({ current: compareStepRef.current, total: compareTotalRef.current, complete: true });
-      setCompareTreeStep(null);
-      setStatus("Comparison complete");
-      setPhase("complete");
-    } catch (e) {
-      if (isCurrentOperation(operation.id) && !isAbortError(e)) {
-        setStatus("Comparison error: " + e.message);
-        setPhase("error");
-        console.error(e);
-      }
-    } finally {
-      finishOperation(operation.id);
-    }
-  }, [beginOperation, finishOperation, isCurrentOperation]);
 
   const loadCompareRows = useCallback(async (cfg, operation) => {
     const algos = cfg.compareAlgos || [];
@@ -571,6 +531,6 @@ export function useRunner(rendererRef) {
     compareCanStepBack: compareStepState.current > 0,
     compareCanStepNext: !compareStepState.complete,
     isComplete: phase === "complete" || stepState.complete,
-    runStatic, pause, stepStatic, reset, compare, runCompareTree, stepCompareTree, stopAnimation, setStatus,
+    runStatic, pause, stepStatic, reset, runCompareTree, stepCompareTree, stopAnimation, setStatus,
   };
 }

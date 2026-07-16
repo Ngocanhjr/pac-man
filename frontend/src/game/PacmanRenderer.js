@@ -24,6 +24,7 @@ export class PacmanRenderer {
     this.visited = [];
     this.path = [];
     this.goal = null; // target cell chosen by user click (path_to_cell exercise)
+    this.problem = "eat_all";
 
     this.pacman = null;
     this.pacDir = "RIGHT";
@@ -85,6 +86,11 @@ export class PacmanRenderer {
     this.draw();
   }
 
+  setProblem(problem) {
+    this.problem = problem;
+    this.draw();
+  }
+
   clearGoal() {
     this.goal = null;
     this.draw();
@@ -139,6 +145,7 @@ export class PacmanRenderer {
 
   // Deletes food at cell `rc` (if any) and fires the eat effect.
   _eatAt(rc, effect = true) {
+    if (this.problem === "path_to_cell") return;
     const k = this._key(rc);
     const ateFood = this.food.delete(k);
     if (effect && this.onEat && ateFood) {
@@ -161,7 +168,7 @@ export class PacmanRenderer {
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this._drawVisited();
     this._drawWalls();
-    this._drawFood();
+    if (this.problem !== "path_to_cell") this._drawFood();
     this._drawGoal();
     this._drawPath();
     this._drawGhosts();
