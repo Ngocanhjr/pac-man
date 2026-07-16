@@ -1,0 +1,391 @@
+BỘ GIÁO DỤC VÀ ĐÀO TẠO
+ ĐẠI HỌC CẦN THƠ 
+TRƯỜNG CÔNG NGHỆ THÔNG TIN & TRUYỀN THÔNG 
+
+
+ 
+ 
+ 
+ 
+ĐỒ ÁN
+HỌC PHẦN TRÍ TUỆ NHÂN TẠO 
+ 
+ 
+ 
+ 
+Đề tài 
+ 
+BÀI TOÁN PAC-MAN 
+ 
+ 
+Nhóm sinh viên thực hiện: 
+1. Nguyễn Như Quỳnh B2303777
+2. Lê Trần Hiếu Nhân B2308203
+3. Lê Thị Ngọc Ảnh B2303861
+
+
+ 
+Cần Thơ, 07/2026
+ 
+BỘ GIÁO DỤC VÀ ĐÀO TẠO
+TRƯỜNG ĐẠI HỌC CẦN THƠ 
+TRƯỜNG CÔNG NGHỆ THÔNG TIN & TRUYỀN THÔNG 
+
+
+ 
+ 
+ 
+ 
+ĐỒ ÁN
+HỌC PHẦN TRÍ TUỆ NHÂN TẠO 
+
+ 
+ 
+ 
+Đề tài 
+ 
+BÀI TOÁN PAC-MAN
+ 
+ 
+ 
+Giảng viên hướng dẫn:Nhóm sinh viên thực hiện:
+1. Nguyễn Như Quỳnh B2303777
+Lưu Tiến Đạo2. Lê Trần Hiếu Nhân B2308203
+3. Lê Thị Ngọc Ảnh B2303861
+
+  
+
+
+Cần Thơ, 07/2026
+NHẬN XÉT CỦA GIẢNG VIÊN
+ 
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+____________________________________________________________________________________________
+Cần Thơ, ngày ..... tháng ..... năm 2026
+(Ký và ghi rõ họ tên)
+ 
+ 
+ 
+ 
+ 
+ 
+  
+ 
+ 
+ 
+
+MỤC LỤC 
+1. MÔ TẢ BÀI TOÁN5
+2. PHÂN TÍCH BÀI TOÁN6
+2.1 Phân tích không gian trạng thái6
+2.1.1. Mô hình bài toán tìm kiếm6
+2.1.2. Bài toán Pathfinding7
+2.1.3. Bài toán Eat-all-dots9
+2.1.4. So sánh không gian trạng thái của hai bài toán14
+2.2 Biểu diễn mê cung14
+3. CƠ SỞ LÝ THUYẾT15
+3.1 Tìm kiếm mù15
+3.2 Tìm kiếm có thông tin16
+4. THIẾT KẾ VÀ CÀI ĐẶT17
+PHẦN KẾT LUẬN18
+TÀI LIỆU THAM KHẢO19
+PHÂN CÔNG CÔNG VIỆC
+STT
+Thành viên
+Nội dung công việc
+1
+Lê Thị Ngọc Ảnh
+Nghiên cứu và cài đặt thuật toán tìm kiếm thông tin (Greedy, A*)
+Chỉnh sửa báo cáo 
+2
+Nguyễn Như Quỳnh
+Nghiên cứu và cài đặt thuật toán UCS Xây dựng UI
+Chỉnh sửa báo cáo 
+3
+Lê Trần Hiếu Nhân
+Xây dựng UI
+Cấu trúc Backend của trò chơi
+Nghiên cứu và cài đặt thuật toán tìm kiếm mù
+
+PHẦN NỘI DUNG
+
+MÔ TẢ BÀI TOÁN
+Trong trò chơi Pacman, Pacman di chuyển trong một mê cung tĩnh được biểu diễn dưới dạng ma trận và chỉ có một tác tử thực hiện hành động  là Pac-man. Bản đồ gồm các ô trống, các bức tường và các ô chứa thức ăn. Không gian trò chơi không thay  đổi trong suốt quá trình thực hiện/  Các bức tường không thay đổi trong quá trình tìm kiếm., đồng thời không có ma, không có thức ăn lớn và không xuất hiện các yếu tố ngẫu nhiên khác. 
+Ở mỗi bước, Pacman chỉ có thể di chuyển theo bốn hướng: lên, xuống, trái hoặc phải. Pacman không thể đi xuyên qua tường và chỉ được phép di chuyển đến những ô hợp lệ trên bản đồ.
+Trong đề tài này, mê cung được xem là môi trường tĩnh, xác định, quan sát đầy đủ và chỉ có một tác tử là Pac-man. Các bức tường không thay đổi trong quá trình tìm kiếm. Pac-man có thể di chuyển theo bốn hướng UP, DOWN, LEFT và RIGHT, với điều kiện ô tiếp theo nằm trong bản đồ và không phải là tường 
+Bài toán được chia thành hai dạng[2]:
+Pathfinding: người chơi chọn trước một vị trí đích trên bản đồ. Nhiệm vụ của Pacman là tìm đường từ vị trí ban đầu đến vị trí đã được chọn. Trạng thái của bài toán trong trường hợp này chỉ cần lưu vị trí hiện tại của Pacman, và quá trình tìm kiếm kết thúc khi Pacman đến đúng ô đích.
+Eat-all-dots: Pac-man phải di chuyển để ăn hết toàn bộ thức ăn trên bản đồ. Trạng thái bao gồm vị trí hiện tại của Pac-man và tập các ô thức ăn còn lại. Mỗi khi Pac-man đi qua một ô có thức ăn, thức ăn tại ô đó được loại khỏi trạng thái. Quá trình tìm kiếm kết thúc khi không còn thức ăn 
+Mỗi bước di chuyển của Pacman có chi phí bằng 1. Vì vậy, mục tiêu của cả hai dạng bài toán là tìm được lời giải có tổng số bước di chuyển ít nhất. 
+Đề tài áp dụng các thuật toán tìm kiếm mù gồm DFS, BFS, UCS và các thuật toán tìm kiếm có thông tin gồm Greedy Best-First Search và A*. Kết quả của mỗi thuật toán được so sánh dựa trên thời gian thực hiện, số trạng thái được mở rộng và chi phí đường đi tìm được. 
+2. PHÂN TÍCH BÀI TOÁN
+2.1 Phân tích không gian trạng thái
+2.1.1 Mô hình bài toán tìm kiếm
+Một bài toán được biểu diễn trong không gian trạng thái thông qua các thành phần chính [2]: 
+Tập trạng thái (State space): tập hợp các trạng thái có thể xuất hiện trong quá trình giải bài toán;
+Trạng thái đầu (initial state): trạng thái mà quá trình tìm kiếm bắt đầu;
+Trạng thái đích (Goal state): trạng thái hoặc điều kiện thể hiện mục tiêu của bài toán;
+Các toán tử (Set of actions) : những thao tác làm thay đổi trạng thái hiện tại thành trạng thái mới;
+Chi phí (Cost/Action cost): chi phí thực hiện mỗi toán tử.
+Một lời giải là một dãy toán tử đưa bài toán từ trạng thái ban đầu đến một trạng thái thỏa mãn điều kiện đích.
+Trong đề tài này, mê cung được xem là môi trường tĩnh, xác định, quan sát đầy đủ và. Pac-man có thể thực hiện các hành động UP, DOWN, LEFT và RIGHT, với điều kiện ô tiếp theo nằm trong bản đồ và không phải là tường. 
+Đề tài xét hai bài toán tìm kiếm riêng biệt:
+Bài toán tìm đường đến một vị trí đích — Pathfinding.
+Bài toán ăn hết tất cả thức ăn — Eat-all-dots.
+Dù đề tài sử dụng cùng một mê cung và cùng các toán tử di chuyển cho hai bài toán Pathfinding và Eat-all-dots. Tuy nhiên, hai bài toán khác nhau về cách biểu diễn trạng thái và điều kiện kết thúc.
+2.1.2 Bài toán Pathfinding
+Bài toán Pathfinding yêu cầu Pac-man tìm một đường đi từ vị trí ban đầu đến một vị trí đích xác định. 
+2.1.2.1 Tập trạng thái và không gian trạng thái
+ Mỗi trạng thái được biểu diễn bằng vị trí hiện tại của Pac-man trên ma trận: 
+s=(r,c)
+Trong đó r là chỉ số hàng và c là chỉ số cột.
+Không gian trạng thái
+Không gian trạng thái là tập hợp tất cả các ô hợp lệ mà Pac-man có thể đứng:
+S = {(r, c) | (r, c) không phải là tường}
+Ví dụ, các trạng thái có thể có gồm:
+(1,1), (1,2), (2,1), (2,2),…
+với điều kiện các vị trí trên là ô hợp lệ của mê cung.
+
+2.1.2.2 Trạng thái ban đầu
+Trạng thái đầu là vị trí xuất phát của Pac-man:
+s0​=(r0​,c0​)
+Trong đó (r0​,c0​) là vị trí ban đầu của Pac-man trên bản đồ.
+Trong phạm vi đề tài. Trạng thái đầu của pacman ở vị trí đầu tiên của ma trận có toạ độ (1,1).
+
+Ví dụ:
+s0​=(1,1)
+Giá trị này chỉ là một ví dụ. Vị trí ban đầu có thể thay đổi tùy theo từng bản đồ.
+2.1.2.3 Trạng thái đích
+Trạng thái đích là vị trí mà Pac-man cần đi đến:
+
+(r, c) = (r_g, c_g)
+Chương trình cho phép người dùng chọn vị trí đích, (rg​,cg​)  được lấy từ lựa chọn của người dùng.
+
+2.1.2.4 Tập hành động và mô hình chuyển trạng thái
+Op = {UP, DOWN, LEFT, RIGHT}
+Tác động của từng toán tử được xác định như sau: 
+UP(r, c) = (r − 1, c)      DOWN(r, c) = (r + 1, c)
+LEFT(r, c) = (r, c − 1)      RIGHT(r, c) = (r, c + 1)
+Một toán tử chỉ được áp dụng khi vị trí mới:
+nằm trong giới hạn của ma trận;
+không phải là ô tường.
+
+Ví dụ, nếu Pac-man đang ở vị trí (2,2), toán tử RIGHT tạo ra trạng thái mới:
+RIGHT(2, 2) = (2, 3), với điều kiện ô (2, 3) là ô hợp lệ.
+2.1.2.5 Chi phí
+Mỗi lần thực hiện một toán tử di chuyển có chi phí bằng 1:
+cost(s, op, s′) = 1
+Tổng chi phí của một đường đi được tính bằng tổng số bước di chuyển: 
+g(n) = ∑ᵏᵢ₌₁ costᵢ
+Do chi phí của mỗi bước đều bằng 1 nên g(n) = k.
+trong đó k là số bước từ trạng thái đầu đến trạng thái hiện tại.
+Mục tiêu của bài toán Pathfinding là tìm một dãy toán tử đưa Pac-man từ trạng thái đầu đến trạng thái đích với tổng chi phí nhỏ nhất.
+2.1.2.6 Hàm heuristic
+Đối với Greedy Best-First Search và A*, bài toán sử dụng hàm heuristic để ước lượng khoảng cách từ vị trí hiện tại đến vị trí đích.
+Khoảng cách Manhattan
+Một heuristic phù hợp là khoảng cách Manhattan: 
+h(n) = |r − r_g| + |c − c_g|
+Trong đó: 
+(r,c) là vị trí hiện tại của Pac-man; 
+(rg​,cg​) là vị trí đích.
+Khoảng cách Manhattan không tính trực tiếp các bức tường, nhưng cung cấp một giá trị ước lượng đơn giản và không vượt quá chi phí thực tế trong mê cung có chuyển động theo bốn hướng.
+2.1.3 Bài toán Eat-all-dots
+Bài toán Eat-all-dots yêu cầu Pac-man di chuyển trong mê cung và ăn hết tất cả các viên thức ăn.
+Khác với Pathfinding, vị trí hiện tại của Pac-man chưa đủ để mô tả một trạng thái. Hai lần Pac-man đứng cùng một vị trí nhưng còn các viên thức ăn khác nhau sẽ dẫn đến những nhiệm vụ tiếp theo khác nhau. Vì vậy, trạng thái phải chứa cả vị trí Pac-man và tập thức ăn còn lại.
+2.1.3.1 Tập trạng thái
+Mỗi trạng thái được biểu diễn như sau:
+s = ((r, c), F)
+Trong đó:
+(r, c) là vị trí hiện tại của Pac-man;
+F là tập các vị trí còn chứa thức ăn.
+Tập trạng thái của bài toán có dạng:
+N = {((r, c), F) | (r, c) là ô hợp lệ và F ⊆ F₀}
+Trong đó F₀ là tập các vị trí thức ăn ban đầu.
+Ví dụ:
+s = ((2, 1), {(1, 2), (2, 3), (4, 5)})
+Trạng thái trên cho biết Pac-man đang đứng tại vị trí (2, 1), đồng thời trên bản đồ còn ba viên thức ăn tại các vị trí (1, 2), (2, 3) và (4, 5).
+Hai trạng thái có cùng vị trí Pac-man nhưng khác tập thức ăn còn lại được xem là hai trạng thái khác nhau.
+Ví dụ:
+s₁ = ((2, 1), {(1, 2), (3, 4)})
+và:
+s₂ = ((2, 1), {(1, 2), (4, 5)})
+Ta có:
+s₁ ≠ s₂
+vì tập thức ăn còn lại trong hai trạng thái không giống nhau.
+Do đó, không thể chỉ sử dụng số lượng thức ăn còn lại để biểu diễn trạng thái. Trạng thái phải lưu chính xác vị trí của từng viên thức ăn chưa được ăn.
+2.1.3.2 Trạng thái ban đầu
+Trạng thái đầu gồm vị trí xuất phát của Pac-man và toàn bộ tập thức ăn ban đầu:
+s₀ = ((r₀, c₀), F₀)
+Ví dụ:
+s₀ = ((1, 1), {(1, 2), (2, 3), (3, 4)})
+Trong đó:
+(1, 1) là vị trí ban đầu của Pac-man;
+F₀ = {(1, 2), (2, 3), (3, 4)} là tập các vị trí chứa thức ăn lúc bắt đầu.
+2.1.3.3 Trạng thái đích
+Bài toán kết thúc khi Pac-man đã ăn hết toàn bộ thức ăn:
+F = ∅
+Do đó, tập trạng thái đích có dạng:
+G = {((r, c), ∅) | (r, c) là một vị trí hợp lệ}
+Khác với Pathfinding, bài toán Eat-all-dots không yêu cầu Pac-man phải kết thúc tại một vị trí cố định. Pac-man có thể đứng tại bất kỳ ô hợp lệ nào, miễn là không còn thức ăn trên bản đồ.
+2.1.3.4 Các toán tử và mô hình chuyển trạng thái
+Pac-man vẫn sử dụng bốn toán tử:
+Op = {UP, DOWN, LEFT, RIGHT}
+Giả sử trạng thái hiện tại là:
+s = (p, F)
+Trong đó p là vị trí Pac-man. Sau khi thực hiện một toán tử hợp lệ, Pac-man di chuyển đến vị trí mới p′.
+Nếu tại p′ có thức ăn, tập thức ăn mới được xác định bằng:
+F′ = F \ {p′}
+Trạng thái kế tiếp là:
+s′ = (p′, F′)
+Nếu p′ không có thức ăn thì:
+F′ = F
+Ví dụ, trạng thái hiện tại là:
+s = ((1, 1), {(1, 2), (3, 4)})
+Sau khi Pac-man thực hiện toán tử RIGHT, Pac-man đi đến vị trí (1, 2). Vì tại vị trí này có thức ăn nên trạng thái mới là:
+s′ = ((1, 2), {(3, 4)})
+2.1.3.5 Chi phí
+Mỗi bước di chuyển có chi phí bằng 1:
+cost(s, op, s′) = 1
+Tổng chi phí của lời giải bằng tổng số bước Pac-man phải thực hiện để ăn hết thức ăn.
+Mục tiêu là tìm một chuỗi toán tử sao cho:
+F = ∅
+và tổng chi phí đường đi là nhỏ nhất.
+2.1.3.6 Hàm heuristic
+Đối với Greedy Best-First Search và A*, hàm heuristic h(n) được sử dụng để ước lượng chi phí còn lại từ trạng thái hiện tại đến trạng thái đích.
+Trong bài toán Eat-all-dots, một trạng thái được biểu diễn bởi:
+n = (p, F)
+Trong đó:
+p = (r, c) là vị trí hiện tại của Pac-man;
+F là tập các vị trí thức ăn còn lại.
+Do bài toán không có một vị trí đích cố định, heuristic phải được xác định dựa trên cả vị trí Pac-man và tập thức ăn chưa được ăn.
+a) Khoảng cách đến viên thức ăn xa nhất
+Heuristic chính được sử dụng cho bài toán Eat-all-dots là khoảng cách Manhattan từ Pac-man đến viên thức ăn xa nhất:
+h_farthest(n) = max_{f ∈ F} (|r − r_f| + |c − c_f|)
+Trong đó (r_f, c_f) là vị trí của một viên thức ăn thuộc tập F.
+Nếu không còn thức ăn thì:
+h_farthest(n) = 0
+Heuristic này dựa trên nhận xét rằng để ăn hết toàn bộ thức ăn, Pac-man bắt buộc phải tiếp cận cả viên thức ăn đang ở xa nhất. Vì khoảng cách Manhattan tạm thời bỏ qua các bức tường nên giá trị ước lượng không lớn hơn chi phí thực tế cần thiết để đến viên thức ăn đó.
+Tuy nhiên, heuristic này chưa phản ánh đầy đủ:
+quãng đường phải đi qua nhiều viên thức ăn;
+thứ tự ăn các viên thức ăn;
+ảnh hưởng của tường và các đường vòng trong mê cung.
+Do đó, đây là một ước lượng hợp lệ nhưng vẫn có thể thấp hơn đáng kể so với chi phí thực tế của lời giải.
+Ngoài heuristic trên, chương trình còn cài đặt một số heuristic khác để phục vụ thực nghiệm.
+b) Khoảng cách đến viên thức ăn gần nhất
+h_nearest(n) = min_{f ∈ F} (|r − r_f| + |c − c_f|)
+Heuristic này ước lượng số bước tối thiểu để Pac-man tiếp cận một viên thức ăn. Nó có chi phí tính toán thấp nhưng thường cung cấp ít thông tin về quãng đường cần thiết để ăn hết những viên thức ăn còn lại.
+c) Số lượng thức ăn còn lại
+h_count(n) = |F|
+Heuristic này sử dụng số lượng thức ăn chưa được ăn. Nó phản ánh số mục tiêu còn lại nhưng không xét vị trí của Pac-man, khoảng cách giữa các viên thức ăn hoặc cấu trúc của mê cung.
+d) Null heuristic
+h_null(n) = 0
+Null heuristic không cung cấp thông tin định hướng. Nó được sử dụng làm trường hợp đối chứng trong thực nghiệm. Khi A* sử dụng h(n) = 0, hàm đánh giá trở thành:
+f(n)=g(n)
+và cách lựa chọn node tương đương với UCS.
+Trong đề tài, khoảng cách đến viên thức ăn xa nhất được chọn làm heuristic chính cho Eat-all-dots. Các heuristic còn lại được sử dụng để so sánh ảnh hưởng của hàm đánh giá đến số trạng thái được mở rộng và thời gian thực hiện.
+Đối với Greedy Best-First Search, node được ưu tiên theo:
+f(n) = h(n)
+Trong khi đó, A* sử dụng:
+f(n) = g(n) + h(n)
+Trong đó g(n) là chi phí từ trạng thái ban đầu đến node hiện tại.
+
+
+2.1.4 So sánh không gian trạng thái của hai bài toán
+Hai bài toán sử dụng cùng mê cung và cùng bốn toán tử di chuyển, nhưng kích thước không gian trạng thái khác nhau đáng kể.
+Đối với Pathfinding, trạng thái chỉ gồm vị trí Pac-man. Nếu mê cung có P ô hợp lệ thì số trạng thái tối đa là:
+|N_Pathfinding| ≤ P
+Đối với Eat-all-dots, trạng thái gồm vị trí Pac-man và tập thức ăn còn lại. Nếu ban đầu có k viên thức ăn thì mỗi viên có hai khả năng: còn hoặc đã được ăn. Số cấu hình thức ăn có thể có là:
+2ᵏ
+Do đó, số trạng thái tối đa của bài toán Eat-all-dots là:
+|N_Eat-all-dots| ≤ P × 2ᵏ
+Như vậy, không gian trạng thái của Eat-all-dots tăng theo cấp số nhân khi số lượng thức ăn tăng. Đây là nguyên nhân khiến bài toán này có độ phức tạp cao hơn đáng kể so với Pathfinding.
+
+2.2 Biểu diễn mê cung
+Mê cung được biểu diễn bằng một ma trận hai chiều có kích thước:
+R × C
+Trong đó:
+R là số hàng;
+C là số cột.
+Không nên mô tả mê cung là N × N, vì bản đồ không bắt buộc phải là hình vuông.
+Mỗi ô trong ma trận tương ứng với một vị trí:
+(r, c)
+Các ô có thể mang những ý nghĩa sau:
+ô tường;
+ô đường đi;
+ô chứa thức ăn;
+vị trí ban đầu của Pac-man;
+vị trí đích, nếu bài toán Pathfinding sử dụng đích được đánh dấu trực tiếp trên bản đồ.
+Pac-man chỉ được phép di chuyển đến các ô hợp lệ. Hai ô được xem là kề nhau nếu chúng có chung một cạnh và Pac-man có thể di chuyển trực tiếp giữa chúng bằng một trong bốn toán tử UP, DOWN, LEFT hoặc RIGHT.
+Trong chương trình, tọa độ nên được thống nhất theo dạng:
+(row, column)
+và chỉ số mảng bắt đầu từ 0:
+0 ≤ r < R,    0 ≤ c < C
+Ô ở góc trên bên trái của toàn bộ ma trận có tọa độ (0, 0). Tuy nhiên, nếu viền ngoài của bản đồ là tường thì vị trí hợp lệ đầu tiên của Pac-man có thể là (1, 1).
+Cần phân biệt:
+(0, 0) là tọa độ đầu tiên của ma trận;
+(1, 1) có thể là ô đường đi đầu tiên nằm bên trong viền tường.
+
+3. CƠ SỞ LÝ THUYẾT
+Các kỹ thuật tìm kiếm 
+Tìm kiếm mù (uninformed/blind search): 
+
+Trạng thái được chọn để phát triển chỉ dựa theo cấu trúc của KGTT mà không dùng thêm thông tin hỗ trợ 
+Tìm kiếm dựa trên kinh nghiệm (informed/ heuristic search) 
+Dựa vào kinh nghiệm và sự hiểu biết để xây dựng hàm đánh giá hướng dẫn tìm kiếm 
+3.1 Tìm kiếm mù
+3.1.1 Breadth-First Search (BFS)
+3.1.2 Depth-First Search (DFS)
+3.1.3 Uniform-Cost Search (UCS)
+Uniform Cost Search (UCS) là một thuật toán tìm kiếm mù (Uninformed Search) được sử dụng để tìm đường đi có tổng chi phí nhỏ nhất từ trạng thái bắt đầu đến trạng thái đích. Thuật toán sử dụng Priority Queue (Min Heap) để quản lý các nút trong frontier, trong đó độ ưu tiên của mỗi nút được xác định bởi:
+f(n)=g(n)
+Với:
+g(n): tổng chi phí từ trạng thái bắt đầu đến node n.
+UCS có hai đặc tính quan trọng:
+Complete (Hoàn chỉnh): luôn tìm được lời giải nếu tồn tại và các chi phí cạnh không âm.
+Optimal (Tối ưu): luôn trả về đường đi có tổng chi phí nhỏ nhất.
+
+
+3.2 Tìm kiếm có thông tin
+Tìm kiếm có thông tin sử dụng hàm heuristic để ước lượng mức độ gần mục tiêu của từng trạng thái. Giá trị heuristic giúp thuật toán ưu tiên những trạng thái được dự đoán có khả năng dẫn đến lời giải tốt hơn.
+3.2.1 Greedy Best-First Search
+Greedy Best-First Search lựa chọn trạng thái có giá trị heuristic nhỏ nhất:
+f(n)=h(n)
+Trong đó h(n) là chi phí ước lượng từ trạng thái hiện tại đến mục tiêu.
+Thuật toán chỉ quan tâm đến khoảng cách ước lượng còn lại mà không xét chi phí đã đi từ trạng thái đầu. Vì vậy, Greedy có thể nhanh chóng hướng về mục tiêu nhưng không bảo đảm tìm được lời giải tối ưu.
+Trong Pathfinding, Greedy có thể sử dụng khoảng cách Manhattan đến vị trí đích. Trong Eat-all-dots, thuật toán có thể sử dụng khoảng cách đến viên thức ăn xa nhất hoặc các heuristic phù hợp khác.
+
+3.2.2 A*
+A* kết hợp chi phí đã đi và chi phí ước lượng còn lại:
+f(n)=g(n)+h(n)
+Trong đó:
+g(n) là chi phí từ trạng thái đầu đến node hiện tại;
+h(n) là chi phí ước lượng từ node hiện tại đến mục tiêu;
+f(n) là tổng chi phí ước lượng của lời giải đi qua node đó.
+A* ưu tiên mở rộng node có giá trị f(n) nhỏ nhất.
+Nếu heuristic không đánh giá vượt quá chi phí thực tế và thỏa mãn các điều kiện cần thiết, A* có thể tìm được lời giải tối ưu.
+Trong đề tài:
+Pathfinding sử dụng khoảng cách Manhattan đến vị trí đích;
+Eat-all-dots có thể sử dụng khoảng cách đến viên thức ăn xa nhất hoặc một heuristic khác dựa trên tập thức ăn còn lại.
+So với UCS, A* có khả năng giảm số trạng thái cần mở rộng nhờ thông tin định hướng từ heuristic. Tuy nhiên, hiệu quả thực tế phụ thuộc nhiều vào chất lượng của hàm heuristic.
+4. THIẾT KẾ VÀ CÀI ĐẶT
+Cài đặt cấu trúc trạng thái:
+
+Xây dựng các hành động làm thay đổi trạng thái:
+  
+
+PHẦN KẾT LUẬN 
+   1. Kết quả đạt được 
+ 
+   2. Hướng phát triển 
+Biểu diễn dưới dạng graphsearch, mở rộng map
+  
+
+TÀI LIỆU THAM KHẢO 
+[1].  File têxt
+[2]. Giáo trình
+ 

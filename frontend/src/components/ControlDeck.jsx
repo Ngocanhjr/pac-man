@@ -174,7 +174,7 @@ export function ControlDeck({
               <option value="path_to_cell">Pathfinding</option>
             </select>
           </Field>
-          {compareUsesHeuristic && (
+          {cfg.problem === "eat_all" && compareUsesHeuristic && (
             <Field label="Heuristic">
               <select value={cfg.heuristic} disabled={busy} onChange={(event) => set({ heuristic: event.target.value }, true)}>
                 {heuristics.map((heuristic) => <option key={heuristic} value={heuristic}>{HEURISTIC_LABEL[heuristic] || heuristic}</option>)}
