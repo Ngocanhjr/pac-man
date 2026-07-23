@@ -32,3 +32,4 @@ venv/
 .codex/
 CLAUDE.md
 .rtk/
+.docs/
