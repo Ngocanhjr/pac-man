@@ -129,7 +129,6 @@ def astar(problem: SearchProblem, heuristic: Heuristic = null_heuristic, record_
                     nid=counter,
                 )
                 h = heuristic(nxt, problem)
-                h = heuristic(nxt, problem)
                 tree.created(child, h, f_val=new_g + h)
                 heapq.heappush(frontier, (new_g + h, counter, child))
                 metrics.generate()
