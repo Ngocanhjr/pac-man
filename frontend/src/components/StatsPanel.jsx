@@ -3,7 +3,6 @@ const METRICS = [
   ["Steps", "path_length", ""],
   ["Cost", "cost", ""],
   ["Nodes expanded", "nodes_expanded", ""],
-  ["Max frontier", "max_frontier", ""],
 ];
 
 const format = (value, unit) => value == null ? "N/A" : `${value}${unit ? ` ${unit}` : ""}`;

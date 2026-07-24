@@ -29,28 +29,15 @@ const DEFAULT_CFG = {
   goal: null,
 };
 
-const PHASE_LABEL = {
-  idle: "Ready",
-  solving: "Solving",
-  replaying: "Replaying",
-  paused: "Paused",
-  complete: "Complete",
-  error: "Error",
-};
-
 const formatCost = (value) => Number.isFinite(value) ? Math.round(value * 100) / 100 : "-";
 
-function StatusStrip({ runner, progress, problem }) {
+function StatusStrip({ progress, problem }) {
   const node = progress?.current;
   const position = node?.pos ? `(${node.pos[0]}, ${node.pos[1]})` : "-";
   const foodSet = `{${(node?.food || []).map(([row, col]) => `(${row}, ${col})`).join(", ")}}`;
   const current = node?.pos && problem === "eat_all" ? `(${position}; ` : position;
   return (
-    <section className={`status-strip phase-${runner.phase}`} aria-live="polite" aria-atomic="true">
-      <div className="status-main">
-        <span>{PHASE_LABEL[runner.phase] || "Ready"}</span>
-        <strong>{runner.status}</strong>
-      </div>
+    <section className="status-strip" aria-live="polite" aria-atomic="true">
       <div>
         <span>CURRENT</span>
         <strong>{node?.pos && problem === "eat_all" ? <>{current}<em className="current-food-set">{foodSet}</em>)</> : current}</strong>
@@ -331,7 +318,7 @@ export default function App() {
           </div>
 
           <ControlDeck {...deckProps} tab="play" section="run" progress={runner.progress} />
-          <StatusStrip runner={runner} progress={runner.progress} problem={cfg.problem} />
+          <StatusStrip progress={runner.progress} problem={cfg.problem} />
           <StatsPanel stats={runner.stats} />
           <ProblemModelPanel problem={cfg.problem} />
         </div>

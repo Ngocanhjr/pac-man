@@ -4,7 +4,6 @@ import { SearchTreePreview } from "./SearchTreePanel";
 
 const METRIC_LABELS = [
   ["nodes", "Fewest nodes", "node"],
-  ["frontier", "Lowest frontier", "node"],
   ["cost", "Best cost", "cost"],
   ["time", "Fastest measured", "ms"],
 ];

@@ -899,7 +899,7 @@ input:disabled {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -931,15 +931,6 @@ input:disabled {
 .current-food-set {
   color: var(--current-food-text);
   font-style: normal;
-}
-.status-main {
-  border-left: 5px solid var(--state-open);
-}
-.phase-error .status-main {
-  border-left-color: var(--state-current);
-}
-.phase-complete .status-main {
-  border-left-color: var(--accent);
 }
 .status-costs {
   display: flex;
@@ -1005,7 +996,7 @@ input:disabled {
 .metric-strip,
 .insight-strip {
   display: grid;
-  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
   gap: 1px;
   overflow: hidden;
   border: 1px solid var(--border);
@@ -1037,7 +1028,7 @@ input:disabled {
   line-height: 1.25;
 }
 .insight-strip {
-  grid-template-columns: repeat(4, minmax(145px, 1fr));
+  grid-template-columns: repeat(3, minmax(145px, 1fr));
 }
 .insight-strip small {
   color: var(--text-muted);
@@ -1532,9 +1523,6 @@ input:disabled {
   }
   .status-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-  .status-main {
-    grid-column: 1 / -1;
   }
   .metric-strip {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
